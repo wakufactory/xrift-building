@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, Euler, InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three'
-import type { BoxPart } from './types'
+import { useEffect, useLayoutEffect, useMemo } from 'react'
+import { useThree } from '@react-three/fiber'
+import { BoxGeometry, Color, Euler, Float32BufferAttribute, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three'
+import type { BoxPart, BoxPartColor } from './types'
 import { missingBuildingMaterial, type BuildingMaterialCatalog } from './materials'
 
 type InstancedBoxLayerProps = {
@@ -8,7 +9,7 @@ type InstancedBoxLayerProps = {
   materials: BuildingMaterialCatalog
 }
 
-const unitBoxGeometry = new BoxGeometry(1, 1, 1)
+const unitBoxGeometry = createUnitBoxGeometry()
 
 export function InstancedBoxLayer({ parts, materials }: InstancedBoxLayerProps) {
   const groups = useMemo(() => groupByMaterial(parts), [parts])
@@ -36,12 +37,54 @@ function InstancedBoxes({
   parts: BoxPart[]
   materials: BuildingMaterialCatalog
 }) {
-  const meshRef = useRef<InstancedMesh>(null)
+  const invalidate = useThree((state) => state.invalidate)
   const material = materials[materialKey] ?? missingBuildingMaterial
+  const baseColor = material.color ?? '#ffffff'
+  const sharedMaterial = useMemo(() => {
+    const { color: _color, ...rest } = material
+    return rest
+  }, [material])
+  const instanceColors = useMemo(() => {
+    const buffer = new Float32Array(parts.length * 3)
+    const color = new Color()
+
+    parts.forEach((part, index) => {
+      setInstanceColor(color, part.color ?? baseColor)
+      color.toArray(buffer, index * 3)
+    })
+
+    return buffer
+  }, [baseColor, parts])
+  const instanceColorAttribute = useMemo(
+    () => new InstancedBufferAttribute(instanceColors, 3),
+    [instanceColors],
+  )
+  const mesh = useMemo(() => {
+    const instancedMesh = new InstancedMesh(
+      unitBoxGeometry,
+      new MeshStandardMaterial({
+        ...sharedMaterial,
+        color: '#ffffff',
+        vertexColors: true,
+      }),
+      parts.length,
+    )
+
+    instancedMesh.instanceColor = instanceColorAttribute
+    instancedMesh.castShadow = true
+    instancedMesh.receiveShadow = true
+    return instancedMesh
+  }, [instanceColorAttribute, parts.length, sharedMaterial])
+
+  useEffect(() => {
+    return () => {
+      mesh.material.dispose()
+    }
+  }, [mesh])
 
   useLayoutEffect(() => {
-    const mesh = meshRef.current
-    if (!mesh) return
+    mesh.instanceColor = instanceColorAttribute
+    mesh.instanceColor.needsUpdate = true
 
     const matrix = new Matrix4()
     const euler = new Euler()
@@ -60,18 +103,26 @@ function InstancedBoxes({
 
     mesh.instanceMatrix.needsUpdate = true
     mesh.computeBoundingSphere()
-  }, [parts])
+    invalidate()
+  }, [instanceColorAttribute, invalidate, mesh, parts])
 
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[unitBoxGeometry, undefined, parts.length]}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial {...material} />
-    </instancedMesh>
-  )
+  return <primitive object={mesh} />
+}
+
+function createUnitBoxGeometry() {
+  const geometry = new BoxGeometry(1, 1, 1)
+  const colorValues = new Float32Array(geometry.attributes.position.count * 3).fill(1)
+  geometry.setAttribute('color', new Float32BufferAttribute(colorValues, 3))
+  return geometry
+}
+
+function setInstanceColor(target: Color, color: BoxPartColor) {
+  if (Array.isArray(color)) {
+    target.setRGB(color[0], color[1], color[2])
+    return
+  }
+
+  target.set(color)
 }
 
 function groupByMaterial(parts: BoxPart[]): [string, BoxPart[]][] {

@@ -88,10 +88,11 @@ xrift-building-world/
 
 - `worldBuildingPlan`
   - `BuildingPlan` 型のデータです。
-  - `floorHeight`, `wallThickness`, `slabThickness`, `materialKeys`, `rooms` を持ちます。
+  - `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms` を持ちます。
   - `materialKeys.room` が床・壁・天井のデフォルト material key です。
   - `materialKeys.exteriorGround` が外部地面のデフォルト material key です。
   - `materialKeys.pillar` が柱の material key です。
+  - `pillar.thickness` が柱の X/Z 方向の太さです。未指定時は `wallThickness * 1.4` です。
   - 各 `RoomSpec.material` で部屋単位の material key を上書きできます。
 
 ### `src/worldMaterials.ts`
@@ -153,15 +154,18 @@ Module Federation で公開するエクスポート定義です。
   - ドア、窓、壁生成対象の方向を表します。
 - `BuildingPlan`
   - 建物全体の入力データです。
-  - `floorHeight`, `wallThickness`, `slabThickness`, `materialKeys`, `rooms`, `exteriorGround` を持ちます。
+  - `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms`, `exteriorGround` を持ちます。
 - `BuildingMaterialKeys`
   - plan 内で使うデフォルト material key 群です。
   - `room.floor`, `room.wall`, `room.ceiling`, `exteriorGround`, `pillar` を持ちます。
 - `ExteriorGroundSpec`
   - 外部地面の余白、厚み、material key を指定します。
   - `BuildingPlan.exteriorGround: false` で外部地面を無効化できます。
+- `PillarSpec`
+  - 柱の生成設定です。
+  - `thickness` で X/Z 方向の太さを指定します。
 - `RoomSpec`
-  - 1 部屋の位置、サイズ、ドア、窓、material key の上書き指定です。
+  - 1 部屋の位置、サイズ、ドア、窓、material key と壁色の上書き指定です。
 - `OpeningSpec`
   - ドアや窓の矩形開口を表します。
   - `side`, `offset`, `width`, `height`, `bottom` を持ちます。
@@ -171,7 +175,7 @@ Module Federation で公開するエクスポート定義です。
   - `floor`, `exteriorGround`, `wall`, `ceiling`, `pillar`, `trim`, `colliderOnly`
 - `BoxPart`
   - コンパイル後の中間表現です。
-  - `id`, `kind`, `position`, `size`, `rotation`, `materialKey`, `collider` を持ちます。
+  - `id`, `kind`, `position`, `size`, `rotation`, `materialKey`, `color`, `collider` を持ちます。
 
 ### `src/building/materials.ts`
 
@@ -247,6 +251,7 @@ Module Federation で公開するエクスポート定義です。
   - north/south は長辺を X、east/west は長辺を Z に置きます。
 - `compileRoomTrim(plan, room)`
   - 部屋の 4 隅に柱 box を生成します。
+  - 柱の太さは `plan.pillar.thickness` を使い、未指定時は `plan.wallThickness * 1.4` を使います。
   - material key は `plan.materialKeys.pillar` を使います。
 
 ### `src/building/BuildingWorld.tsx`
@@ -301,10 +306,11 @@ Module Federation で公開するエクスポート定義です。
   - `groupByMaterial(parts)` で material key 単位に分けます。
   - 各 material group を `InstancedBoxes` として描画します。
 - `InstancedBoxes({ materialKey, parts, materials })`
-  - `materials[materialKey]` を `meshStandardMaterial` に渡します。
+  - `materials[materialKey]` から共通 material parameters を作ります。
   - material key が catalog にない場合は `missingBuildingMaterial` を使います。
-  - `InstancedMesh` に各 `BoxPart` の matrix を設定します。
+  - `InstancedMesh` に各 `BoxPart` の matrix と instance color を設定します。
   - `position`, `rotation`, `size` を `Matrix4.compose` で instance matrix に変換します。
+  - `BoxPart.color` があればその色、なければ material catalog の `color` を instance color として使います。
 - `groupByMaterial(parts)`
   - `BoxPart[]` を `materialKey` ごとにグループ化します。
 
@@ -336,7 +342,7 @@ Module Federation で公開するエクスポート定義です。
 - 4 面の壁
 - 4 隅の柱
 
-床・壁・天井の material key は、まず `plan.materialKeys.room` を使い、部屋に `room.material` がある場合はその値で上書きします。
+床・壁・天井の material key は、まず `plan.materialKeys.room` を使い、部屋に `room.material` がある場合はその値で上書きします。壁の色だけを変えたい場合は `room.wallColors` に `north` / `south` / `east` / `west` の色を指定します。これは material key を増やさず、生成された壁 `BoxPart.color` として描画側に渡されます。
 
 ただし、隣の部屋と共有している壁は片側だけが生成します。これにより、同じ平面に壁 mesh / collider が重なることを防ぎます。
 
@@ -367,13 +373,15 @@ Module Federation で公開するエクスポート定義です。
 
 `Building` は plan を `BoxPart[]` にコンパイルし、`InstancedBoxLayer` に渡します。
 
-`InstancedBoxLayer` は `materialKey` ごとに `BoxPart` をまとめます。Three.js の `InstancedMesh` は 1 つの geometry と 1 つの material を共有するため、material key ごとに mesh を分ける必要があります。
+`InstancedBoxLayer` は `materialKey` ごとに `BoxPart` をまとめます。色違いは mesh を分けず、`InstancedMesh.instanceColor` に渡します。material の `vertexColors` は使わず、Three.js の `USE_INSTANCING_COLOR` 経路だけを使います。
 
 各 instance では以下を matrix に変換します。
 
 - `position`
 - `rotation`
 - `size`
+
+また、`BoxPart.color` がある場合はその色を instance color に設定します。未指定の場合は material catalog の `color` を instance color として使います。material 自体の `color` は白にして、instance color がそのまま表面色になるようにしています。
 
 このため、同じ material の床・壁・柱などは 1 つの `instancedMesh` にまとめて描画できます。
 

@@ -10,14 +10,17 @@ export { worldBuildingMaterials } from './worldMaterials'
 export { worldBuildingPlan } from './worldPlan'
 export type {
   BoxPart,
+  BoxPartColor,
   BoxPartKind,
   BuildingMaterialKeys,
   BuildingPlan,
   ExteriorGroundSpec,
   OpeningSpec,
+  PillarSpec,
   RoomMaterials,
   RoomSpec,
   Vec2,
   Vec3,
+  WallColorMap,
   WallSide,
 } from './building/types'

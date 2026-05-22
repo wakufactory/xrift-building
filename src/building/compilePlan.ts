@@ -1,4 +1,4 @@
-import type { BoxPart, BuildingPlan, OpeningSpec, RoomMaterials, RoomSpec, Vec3, WallSide } from './types'
+import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomMaterials, RoomSpec, Vec3, WallSide } from './types'
 
 type WallSegment = {
   start: number
@@ -119,6 +119,7 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
       ...normalizeOpenings(room.doors ?? [], side, true),
       ...normalizeOpenings(room.windows ?? [], side, false),
     ]
+    const wallColor = room.wallColors?.[side]
 
     parts.push(
       ...compileWall({
@@ -129,6 +130,7 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
         wallThickness: plan.wallThickness,
         floorHeight: plan.floorHeight,
         materialKey: materials.wall,
+        color: wallColor,
         openings: wallOpenings,
       }),
     )
@@ -207,6 +209,7 @@ function dedupeExactBoxParts(parts: BoxPart[]): BoxPart[] {
     const key = [
       part.kind,
       part.materialKey,
+      part.color === undefined ? '' : colorToDedupeKey(part.color),
       ...part.position.map(toDedupeKey),
       ...part.size.map(toDedupeKey),
       ...(part.rotation ?? [0, 0, 0]).map(toDedupeKey),
@@ -220,6 +223,14 @@ function dedupeExactBoxParts(parts: BoxPart[]): BoxPart[] {
 
 function toDedupeKey(value: number): string {
   return value.toFixed(4)
+}
+
+function colorToDedupeKey(color: BoxPartColor): string {
+  if (Array.isArray(color)) {
+    return color.map(toDedupeKey).join(',')
+  }
+
+  return String(color)
 }
 
 function normalizeOpenings(openings: OpeningSpec[], side: WallSide, isDoor: boolean): OpeningSpec[] {
@@ -240,9 +251,10 @@ function compileWall(input: {
   wallThickness: number
   floorHeight: number
   materialKey: string
+  color?: BoxPartColor
   openings: OpeningSpec[]
 }): BoxPart[] {
-  const { roomId, side, roomCenter, roomSize, wallThickness, floorHeight, materialKey, openings } = input
+  const { roomId, side, roomCenter, roomSize, wallThickness, floorHeight, materialKey, color, openings } = input
   const [roomX, roomZ] = roomCenter
   const [width, depth] = roomSize
   const wallLength = side === 'north' || side === 'south' ? width : depth
@@ -263,6 +275,7 @@ function compileWall(input: {
       position: wallPartPosition(side, roomX, roomZ, width, depth, centerAlongWall, centerY),
       size: wallPartSize(side, segmentLength, segmentHeight, wallThickness),
       materialKey,
+      color,
       collider: true,
     }
   })
@@ -373,7 +386,7 @@ function wallPartSize(side: WallSide, length: number, height: number, wallThickn
 function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size
-  const pillarSize = plan.wallThickness * 1.4
+  const pillarSize = plan.pillar?.thickness ?? plan.wallThickness * 1.4
   const pillarHeight = plan.floorHeight
   const y = pillarHeight / 2
 

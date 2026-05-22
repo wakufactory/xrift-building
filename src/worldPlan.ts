@@ -4,6 +4,9 @@ export const worldBuildingPlan: BuildingPlan = {
   floorHeight: 5.5,
   wallThickness: 0.22,
   slabThickness: 0.12,
+  pillar: {
+    thickness: 0.25,
+  },
   materialKeys: {
     room: {
       floor: 'floor:warm-wood',
@@ -21,6 +24,10 @@ export const worldBuildingPlan: BuildingPlan = {
       material: {
         floor: 'floor:stone',
         wall: 'wall:plaster',
+      },
+      wallColors: {
+        north: '#ded5c5',
+        south: '#dc7310',
       },
       doors: [
         { side: 'north', offset: 0, width: 2.4, height: 2.25 },
@@ -44,8 +51,9 @@ export const worldBuildingPlan: BuildingPlan = {
         { side: 'east', offset: -2.8, width: 2.1, height: 2.15 },
       ],
       windows: [
-        { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1.1 },
+        { side: 'west', offset: -2., width: 1.5, bottom: 1, height: 1.1 },
         { side: 'west', offset: 2.5, width: 1.5, bottom: 1, height: 1.1 },
+        { side: 'north', offset: -0, width: 5, bottom: 1.1, height: 2 },
       ],
     },
     {
@@ -54,6 +62,10 @@ export const worldBuildingPlan: BuildingPlan = {
       size: [3.2, 4.6],
       material: {
         wall: 'wall:accent',
+      },
+      wallColors: {
+        north: '#607a71',
+        west: '#4c625b',
       },
       doors: [
         { side: 'east', offset: -0.5, width: 2, height: 2.15 },
