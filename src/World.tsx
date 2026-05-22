@@ -20,12 +20,25 @@ export const World: React.FC<WorldProps> = ({
       <color attach="background" args={['#b9c6cc']} />
       <fog attach="fog" args={['#b9c6cc', 28, 72]} />
 
-      <SpawnPoint position={[0, 0.05, -2.2]} yaw={180} />
+      <SpawnPoint position={[10, 0.05, 5]} yaw={90} />
+    {/*
+      <RigidBody type="fixed" colliders="cuboid" restitution={0} friction={1}>
+        <mesh  rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+          <planeGeometry args={[20, 20]} />
+          <meshLambertMaterial  color={[0.5,1.,1.]} />
+        </mesh>
+      </RigidBody>
+      */}
+      <mesh  position={[5, 0.75, 7]} castShadow>
+        <boxGeometry args={[1, 1.5, 1]} />
+        <meshStandardMaterial color="#a0a0a0" />
+      </mesh>
+
 
       <ambientLight intensity={0.45} />
       <hemisphereLight args={['#f4efe3', '#526069', 1.1]} />
       <directionalLight
-        position={[8, 12, 6]}
+        position={[4, 12, 8]}
         intensity={2.2}
         castShadow
         shadow-mapSize-width={1024}

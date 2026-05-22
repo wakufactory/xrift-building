@@ -94,7 +94,7 @@ xrift-building-world/
   - `materialKeys.exteriorGround` が外部地面のデフォルト material key です。
   - `materialKeys.pillar` が柱の material key です。
   - `pillar.thickness` が柱の X/Z 方向の太さです。未指定時は `wallThickness * 1.4` です。
-  - 各 `RoomSpec.material` で部屋単位の material key を上書きできます。
+  - 各 `RoomSpec.surfaces` で床・天井・壁ごとの material key、色、表示、コライダーを上書きできます。
 
 ### `src/worldMaterials.ts`
 
@@ -153,6 +153,7 @@ Module Federation で公開するエクスポート定義です。
 - `WallSide`
   - `'north' | 'south' | 'east' | 'west'`
   - ドア、窓、壁生成対象の方向を表します。
+  - XRift のデフォルト正面に合わせ、north は `-Z`、south は `+Z`、east は `+X`、west は `-X` です。
 - `BuildingPlan`
   - 建物全体の入力データです。
   - `unit`, `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms`, `exteriorGround` を持ちます。
@@ -168,10 +169,19 @@ Module Federation で公開するエクスポート定義です。
   - 柱の生成設定です。
   - `thickness` で X/Z 方向の太さを指定します。
 - `RoomSpec`
-  - 1 部屋の位置、サイズ、ドア、窓、material key と壁色の上書き指定です。
+  - 1 部屋の位置、サイズ、ドア、窓、面ごとの上書き指定です。
+  - `surfaces.floor`, `surfaces.ceiling`, `surfaces.wall`, `surfaces.walls[side]` で面ごとの見た目と物理を指定します。
+- `SurfaceSpec`
+  - `materialKey?: string`
+  - `color?: BoxPartColor`
+  - `hidden?: boolean`
+  - `noCollider?: boolean`
+  - `surfaces.wall` は部屋内の全壁デフォルトです。`surfaces.walls.north` などの個別壁指定が同じ項目を上書きします。
+  - `hidden: true` かつ `noCollider` 未指定なら、透明な壁や床として描画せず衝突だけ残します。
 - `OpeningSpec`
   - ドアや窓の矩形開口を表します。
   - `side`, `offset`, `width`, `height`, `bottom` を持ちます。
+  - `offset` は north/south 壁では east 方向を正、east/west 壁では north 方向を正として扱います。
   - 寸法値は unit 座標で指定します。
 - `RoomMaterials`
   - 部屋単位の `floor`, `wall`, `ceiling` material key 指定です。
@@ -179,7 +189,7 @@ Module Federation で公開するエクスポート定義です。
   - `floor`, `exteriorGround`, `wall`, `ceiling`, `pillar`, `trim`, `colliderOnly`
 - `BoxPart`
   - コンパイル後の中間表現です。
-  - `id`, `kind`, `position`, `size`, `rotation`, `materialKey`, `color`, `collider` を持ちます。
+  - `id`, `kind`, `position`, `size`, `rotation`, `materialKey`, `color`, `visible`, `collider` を持ちます。
 
 ### `src/building/materials.ts`
 
@@ -223,7 +233,7 @@ Module Federation で公開するエクスポート定義です。
   - 複数部屋の外接矩形を計算します。
 - `compileRoom(plan, room)`
   - 1 部屋から床、天井、壁、柱の `BoxPart` を生成します。
-  - 部屋の material key は `plan.materialKeys.room` に `room.material` を重ねて決めます。
+  - 部屋の面ごとの指定は `plan.materialKeys.room` をデフォルトにして、`room.surfaces` の `materialKey` / `color` / `hidden` / `noCollider` で上書きします。
   - 共有壁は壁全体をスキップせず、他の部屋が所有する共有区間だけを全高の開口として差し引きます。
 - `getSharedWallOpeningsOwnedByAnotherRoom(rooms, room, side, floorHeight)`
   - 指定 wall 上で、辞書順で先の部屋が所有する共有区間を全高の開口として返します。
@@ -348,7 +358,7 @@ Module Federation で公開するエクスポート定義です。
 - 4 面の壁
 - 4 隅の柱
 
-床・壁・天井の material key は、まず `plan.materialKeys.room` を使い、部屋に `room.material` がある場合はその値で上書きします。壁の色だけを変えたい場合は `room.wallColors` に `north` / `south` / `east` / `west` の色を指定します。これは material key を増やさず、生成された壁 `BoxPart.color` として描画側に渡されます。
+床・壁・天井の material key は、まず `plan.materialKeys.room` を使います。部屋ごとに変えたい場合は `room.surfaces.floor.materialKey`、`room.surfaces.ceiling.materialKey`、`room.surfaces.wall.materialKey` で上書きします。壁ごとに変えたい場合は `room.surfaces.walls.north` / `south` / `east` / `west` の `materialKey` や `color` を指定します。`surfaces.wall` が全壁デフォルト、`surfaces.walls[side]` が個別壁 override です。
 
 ただし、隣の部屋と共有している壁は片側だけが生成します。これにより、同じ平面に壁 mesh / collider が重なることを防ぎます。
 

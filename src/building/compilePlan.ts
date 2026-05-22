@@ -1,4 +1,4 @@
-import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomMaterials, RoomSpec, Vec3, WallSide } from './types'
+import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomSpec, SurfaceSpec, Vec3, WallSide } from './types'
 
 type WallSegment = {
   start: number
@@ -131,32 +131,32 @@ function getRoomBounds(rooms: RoomSpec[]) {
 }
 
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
-  const materials: RoomMaterials = {
-    ...plan.materialKeys.room,
-    ...room.material,
-  }
   const [x, z] = room.position
   const [width, depth] = room.size
   const floorY = -plan.slabThickness / 2
   const ceilingY = plan.floorHeight + plan.slabThickness / 2
+  const floorSurface = room.surfaces?.floor
+  const ceilingSurface = room.surfaces?.ceiling
 
   const parts: BoxPart[] = [
-    {
+    applySurfaceSpec({
       id: `${room.id}:floor`,
       kind: 'floor',
       position: [x, floorY, z],
       size: [width, plan.slabThickness, depth],
-      materialKey: materials.floor,
+      materialKey: floorSurface?.materialKey ?? plan.materialKeys.room.floor,
+      color: floorSurface?.color,
       collider: true,
-    },
-    {
+    }, floorSurface),
+    applySurfaceSpec({
       id: `${room.id}:ceiling`,
       kind: 'ceiling',
       position: [x, ceilingY, z],
       size: [width, plan.slabThickness, depth],
-      materialKey: materials.ceiling,
-      collider: false,
-    },
+      materialKey: ceilingSurface?.materialKey ?? plan.materialKeys.room.ceiling,
+      color: ceilingSurface?.color,
+      collider: true,
+    }, ceilingSurface),
   ]
 
   for (const side of ['north', 'south', 'east', 'west'] as WallSide[]) {
@@ -168,7 +168,10 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
       ...normalizeOpenings(room.doors ?? [], side, true),
       ...normalizeOpenings(room.windows ?? [], side, false),
     ]
-    const wallColor = room.wallColors?.[side]
+    const wallSurface = {
+      ...room.surfaces?.wall,
+      ...room.surfaces?.walls?.[side],
+    }
 
     parts.push(
       ...compileWall({
@@ -178,8 +181,9 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
         roomSize: [width, depth],
         wallThickness: plan.wallThickness,
         floorHeight: plan.floorHeight,
-        materialKey: materials.wall,
-        color: wallColor,
+        materialKey: wallSurface.materialKey ?? plan.materialKeys.room.wall,
+        color: wallSurface.color,
+        surface: wallSurface,
         openings: wallOpenings,
       }),
     )
@@ -224,25 +228,32 @@ function getOppositeWallOverlap(room: RoomSpec, side: WallSide, other: RoomSpec)
 
   switch (side) {
     case 'north': {
-      if (!nearlyEqual(roomBounds.maxZ, otherBounds.minZ)) return undefined
+      if (!nearlyEqual(roomBounds.minZ, otherBounds.maxZ)) return undefined
       const overlap = rangeIntersection(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
       return overlap && { start: overlap.min - roomX, end: overlap.max - roomX }
     }
     case 'south': {
-      if (!nearlyEqual(roomBounds.minZ, otherBounds.maxZ)) return undefined
+      if (!nearlyEqual(roomBounds.maxZ, otherBounds.minZ)) return undefined
       const overlap = rangeIntersection(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
       return overlap && { start: overlap.min - roomX, end: overlap.max - roomX }
     }
     case 'east': {
       if (!nearlyEqual(roomBounds.maxX, otherBounds.minX)) return undefined
       const overlap = rangeIntersection(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
-      return overlap && { start: overlap.min - roomZ, end: overlap.max - roomZ }
+      return overlap && zOverlapToNorthPositiveOffset(overlap.min, overlap.max, roomZ)
     }
     case 'west': {
       if (!nearlyEqual(roomBounds.minX, otherBounds.maxX)) return undefined
       const overlap = rangeIntersection(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
-      return overlap && { start: overlap.min - roomZ, end: overlap.max - roomZ }
+      return overlap && zOverlapToNorthPositiveOffset(overlap.min, overlap.max, roomZ)
     }
+  }
+}
+
+function zOverlapToNorthPositiveOffset(minZ: number, maxZ: number, roomZ: number): { start: number, end: number } {
+  return {
+    start: roomZ - maxZ,
+    end: roomZ - minZ,
   }
 }
 
@@ -284,6 +295,8 @@ function dedupeExactBoxParts(parts: BoxPart[]): BoxPart[] {
       part.kind,
       part.materialKey,
       part.color === undefined ? '' : colorToDedupeKey(part.color),
+      part.visible === false ? 'hidden' : 'visible',
+      part.collider === false ? 'noCollider' : 'collider',
       ...part.position.map(toDedupeKey),
       ...part.size.map(toDedupeKey),
       ...(part.rotation ?? [0, 0, 0]).map(toDedupeKey),
@@ -326,9 +339,10 @@ function compileWall(input: {
   floorHeight: number
   materialKey: string
   color?: BoxPartColor
+  surface?: SurfaceSpec
   openings: OpeningSpec[]
 }): BoxPart[] {
-  const { roomId, side, roomCenter, roomSize, wallThickness, floorHeight, materialKey, color, openings } = input
+  const { roomId, side, roomCenter, roomSize, wallThickness, floorHeight, materialKey, color, surface, openings } = input
   const [roomX, roomZ] = roomCenter
   const [width, depth] = roomSize
   const wallLength = side === 'north' || side === 'south' ? width : depth
@@ -343,7 +357,7 @@ function compileWall(input: {
     const centerY = (segment.bottom + segment.top) / 2
     const segmentHeight = segment.top - segment.bottom
 
-    return {
+    return applySurfaceSpec({
       id: `${roomId}:wall:${side}:${index}`,
       kind: 'wall',
       position: wallPartPosition(side, roomX, roomZ, width, depth, centerAlongWall, centerY),
@@ -351,8 +365,20 @@ function compileWall(input: {
       materialKey,
       color,
       collider: true,
-    }
+    }, surface)
   })
+}
+
+function applySurfaceSpec(part: BoxPart, surface: SurfaceSpec | undefined): BoxPart {
+  if (!surface) {
+    return part
+  }
+
+  return {
+    ...part,
+    visible: surface.hidden ? false : part.visible,
+    collider: surface.noCollider ? false : part.collider,
+  }
 }
 
 function splitWallSegments(wallLength: number, floorHeight: number, openings: OpeningSpec[]): WallSegment[] {
@@ -433,17 +459,17 @@ function wallPartPosition(
   centerAlongWall: number,
   centerY: number,
 ): Vec3 {
-  // segment の中心位置は壁の長手方向に沿った座標で表す。north/south の
-  // 壁ではその座標を X に、east/west の壁では Z に割り当てる。
+  // このワールドではデフォルト正面の -Z を north として扱う。
+  // east/west 壁上の offset も + を north 方向に揃える。
   switch (side) {
     case 'north':
-      return [roomX + centerAlongWall, centerY, roomZ + depth / 2]
-    case 'south':
       return [roomX + centerAlongWall, centerY, roomZ - depth / 2]
+    case 'south':
+      return [roomX + centerAlongWall, centerY, roomZ + depth / 2]
     case 'east':
-      return [roomX + width / 2, centerY, roomZ + centerAlongWall]
+      return [roomX + width / 2, centerY, roomZ - centerAlongWall]
     case 'west':
-      return [roomX - width / 2, centerY, roomZ + centerAlongWall]
+      return [roomX - width / 2, centerY, roomZ - centerAlongWall]
   }
 }
 

@@ -12,7 +12,8 @@ type InstancedBoxLayerProps = {
 const unitBoxGeometry = createUnitBoxGeometry()
 
 export function InstancedBoxLayer({ parts, materials }: InstancedBoxLayerProps) {
-  const groups = useMemo(() => groupByMaterial(parts), [parts])
+  const visibleParts = useMemo(() => parts.filter((part) => part.visible !== false), [parts])
+  const groups = useMemo(() => groupByMaterial(visibleParts), [visibleParts])
 
   return (
     <>

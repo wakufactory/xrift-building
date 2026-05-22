@@ -5,7 +5,7 @@ export type Vec3 = [number, number, number]
 
 export type WallSide = 'north' | 'south' | 'east' | 'west'
 export type BoxPartColor = ColorRepresentation | Vec3
-export type WallColorMap = Partial<Record<WallSide, BoxPartColor>>
+export type WallSurfaceMap = Partial<Record<WallSide, SurfaceSpec>>
 
 export type BuildingPlan = {
   unit?: number
@@ -38,10 +38,25 @@ export type RoomSpec = {
   id: string
   position: Vec2
   size: Vec2
-  material?: Partial<RoomMaterials>
-  wallColors?: WallColorMap
+  surfaces?: RoomSurfaces
   doors?: OpeningSpec[]
   windows?: OpeningSpec[]
+}
+
+export type SurfaceSpec = {
+  materialKey?: string
+  color?: BoxPartColor
+  hidden?: boolean
+  noCollider?: boolean
+}
+
+export type SurfaceFlags = SurfaceSpec
+
+export type RoomSurfaces = {
+  floor?: SurfaceSpec
+  wall?: SurfaceSpec
+  ceiling?: SurfaceSpec
+  walls?: WallSurfaceMap
 }
 
 export type OpeningSpec = {
@@ -75,5 +90,6 @@ export type BoxPart = {
   rotation?: Vec3
   materialKey: string
   color?: BoxPartColor
+  visible?: boolean
   collider?: boolean
 }

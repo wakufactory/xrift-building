@@ -30,7 +30,7 @@ export function Building({ plan, materials, enableProfileLog = true }: BuildingP
 function createBuildingProfile(parts: BoxPart[]) {
   const byMaterial = countBy(parts, (part) => part.materialKey)
   const byKind = countBy(parts, (part) => part.kind)
-  const renderInstances = parts.length
+  const renderInstances = parts.filter((part) => part.visible !== false).length
   const colliderInstances = parts.filter((part) => part.collider !== false).length
 
   return {

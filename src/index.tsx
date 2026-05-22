@@ -19,8 +19,11 @@ export type {
   PillarSpec,
   RoomMaterials,
   RoomSpec,
+  RoomSurfaces,
+  SurfaceFlags,
+  SurfaceSpec,
   Vec2,
   Vec3,
-  WallColorMap,
   WallSide,
+  WallSurfaceMap,
 } from './building/types'
