@@ -2,8 +2,8 @@
   "world": {
     "distDir": "./dist",
     "title": "Instanced Building World",
-    "description": "コードベースの部屋定義からBoxPartを生成し、box instancingで描画するXRiftワールドです",
-    "thumbnailPath": "thumbnail.png",
+    "description": "コードベースの部屋定義から建物を生成するワールド(開発中)",
+    "thumbnailPath": "thumbnail.jpg",
     "buildCommand": "npm run build",
     "ignore": [
       "**/.DS_Store",
