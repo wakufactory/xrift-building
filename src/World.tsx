@@ -1,9 +1,7 @@
 import { SpawnPoint } from '@xrift/world-components'
 import { RigidBody} from '@react-three/rapier'
-import { BuildingWorld } from './building/BuildingWorld'
 import type { Vec3 } from './building/types'
-import { worldBuildingMaterials } from './worldMaterials'
-import { plan1,plan2 } from './worldPlan.ts'
+import {Buildings} from './worldPlan.tsx'
 
 export interface WorldProps {
   position?: Vec3
@@ -12,7 +10,7 @@ export interface WorldProps {
 }
 
 export const World: React.FC<WorldProps> = ({
-  enableProfileLog = true,
+
 }) => {
   return (
     <>
@@ -56,19 +54,7 @@ export const World: React.FC<WorldProps> = ({
         shadow-camera-near={0.1}
         shadow-camera-far={60}
       />
-
-      <BuildingWorld
-        plan={plan1}
-        materials={worldBuildingMaterials}
-        position={[0,0,0]}
-        enableProfileLog={enableProfileLog}
-      />
-      <BuildingWorld
-        plan={plan2}
-        materials={worldBuildingMaterials}
-        position={[0,5.5 ,0]}
-        enableProfileLog={enableProfileLog}
-      />
+      {Buildings() }
     </>
   )
 }

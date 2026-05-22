@@ -1,4 +1,6 @@
 import type { BuildingPlan } from './building/types'
+import { BuildingWorld } from './building/BuildingWorld'
+import { worldBuildingMaterials } from './worldMaterials'
 
 /// north -z east +x south +z west x
 
@@ -125,4 +127,23 @@ export const plan2: BuildingPlan = {
       ],
     },
   ]
+}
+
+export function Buildings() {
+  return (
+    <>
+      <BuildingWorld
+        plan={plan1}
+        materials={worldBuildingMaterials}
+        position={[0,0,0]}
+        enableProfileLog={true}
+      />
+      <BuildingWorld
+        plan={plan2}
+        materials={worldBuildingMaterials}
+        position={[0,5.5 ,0]}
+        enableProfileLog={true}
+      />
+    </>
+  )
 }
