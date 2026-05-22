@@ -1,3 +1,10 @@
+/**
+ * 開発環境用エントリーポイント
+ *
+ * ローカル開発時（npm run dev）に使用されます。
+ * 本番ビルド（npm run build）では使用されません。
+ */
+
 import { DevEnvironment, XRiftProvider } from '@xrift/world-components'
 import type { CameraConfig, PhysicsConfig } from '@xrift/world-components'
 import { StrictMode } from 'react'
@@ -9,12 +16,12 @@ const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element not found')
 
 const physicsConfig: PhysicsConfig | undefined = (
-  xriftConfig as { world?: { physics?: PhysicsConfig } }
-).world?.physics
+  xriftConfig as { physics?: PhysicsConfig }
+).physics
 
 const cameraConfig: CameraConfig | undefined = (
-  xriftConfig as { world?: { camera?: CameraConfig } }
-).world?.camera
+  xriftConfig as { camera?: CameraConfig }
+).camera
 
 createRoot(rootElement).render(
   <StrictMode>

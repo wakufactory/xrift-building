@@ -1,8 +1,8 @@
 import type { BuildingPlan } from './building/types'
 
-// north +z east -x south -z west +x
+/// north -z east +x south +z west x
 
-export const worldBuildingPlan: BuildingPlan = {
+export const plan1: BuildingPlan = {
   unit: 1,
   floorHeight: 5.5,
   wallThickness: 0.22,
@@ -33,7 +33,7 @@ export const worldBuildingPlan: BuildingPlan = {
       },
       doors: [
         { side: 'north', offset: 0, width: 2.4, height: 2.25 },
-        { side: 'east', offset: 2.8, width: 2.1, height: 2.25 },
+        { side: 'east', offset: 2.7, width: 2.1, height: 2.25 },
       ],
       windows: [
         { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.1 },
@@ -46,7 +46,7 @@ export const worldBuildingPlan: BuildingPlan = {
       position: [1, 0],
       size: [10, 6],
       surfaces: {
-        ceiling: { hidden: true,noCollider: true },
+        ceiling: { hidden: true, noCollider: true },
         floor: { materialKey: 'floor:stone' },
         wall: { materialKey: 'wall:plaster' },
         walls: {
@@ -82,4 +82,47 @@ export const worldBuildingPlan: BuildingPlan = {
       ],
     },
   ],
+}
+
+export const plan2: BuildingPlan = {
+  unit: 1,
+  floorHeight: 5.5,
+  wallThickness: 0.22,
+  slabThickness: 0.12,
+  exteriorGround: false,
+  pillar: {
+    thickness: 0.25,
+  },
+  materialKeys: {
+    room: {
+      floor: 'floor:warm-wood',
+      wall: 'wall:plaster',
+      ceiling: 'ceiling:soft-white',
+    },
+    exteriorGround: 'ground:outdoor',
+    pillar: 'pillar:concrete',
+  },
+  rooms: [
+    {
+      id: '2F-robby',
+      position: [0, 8],
+      size: [8, 10],
+      surfaces: {
+        floor: { hidden:true  },
+        wall: { materialKey: 'wall:gallery-white' },
+        walls: {
+          north: { color: '#208020' },
+        },
+      },
+      doors: [
+        { side: 'east', offset: -2.8, width: 2.1, height: 2.25 },
+      ],
+      windows: [
+        { side: 'north', offset :0, width:2.4, bottom:1, height:2},
+        { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.1 },
+        { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1.1 },
+        { side: 'south', offset: -0, width: 5, bottom: 1.1, height: 2 },
+      ],
+    },
+  ]
 }

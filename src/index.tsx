@@ -7,7 +7,6 @@ export type { BuildingWorldProps } from './building/BuildingWorld'
 export { missingBuildingMaterial } from './building/materials'
 export type { BuildingMaterialCatalog } from './building/materials'
 export { worldBuildingMaterials } from './worldMaterials'
-export { worldBuildingPlan } from './worldPlan'
 export type {
   BoxPart,
   BoxPartColor,
