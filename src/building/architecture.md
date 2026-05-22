@@ -88,7 +88,8 @@ xrift-building-world/
 
 - `worldBuildingPlan`
   - `BuildingPlan` 型のデータです。
-  - `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms` を持ちます。
+  - `unit`, `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms` を持ちます。
+  - `unit` が plan 内の 1 単位あたりの実サイズです。未指定時は `1` です。
   - `materialKeys.room` が床・壁・天井のデフォルト material key です。
   - `materialKeys.exteriorGround` が外部地面のデフォルト material key です。
   - `materialKeys.pillar` が柱の material key です。
@@ -154,7 +155,9 @@ Module Federation で公開するエクスポート定義です。
   - ドア、窓、壁生成対象の方向を表します。
 - `BuildingPlan`
   - 建物全体の入力データです。
-  - `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms`, `exteriorGround` を持ちます。
+  - `unit`, `floorHeight`, `wallThickness`, `slabThickness`, `pillar`, `materialKeys`, `rooms`, `exteriorGround` を持ちます。
+  - `unit` は plan 内の寸法値を実座標へ変換する倍率です。
+  - `room.position`, `room.size`, `OpeningSpec` の `offset` / `width` / `height` / `bottom`、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `exteriorGround.margin` / `thickness` は unit 座標として指定します。
 - `BuildingMaterialKeys`
   - plan 内で使うデフォルト material key 群です。
   - `room.floor`, `room.wall`, `room.ceiling`, `exteriorGround`, `pillar` を持ちます。
@@ -169,6 +172,7 @@ Module Federation で公開するエクスポート定義です。
 - `OpeningSpec`
   - ドアや窓の矩形開口を表します。
   - `side`, `offset`, `width`, `height`, `bottom` を持ちます。
+  - 寸法値は unit 座標で指定します。
 - `RoomMaterials`
   - 部屋単位の `floor`, `wall`, `ceiling` material key 指定です。
 - `BoxPartKind`
@@ -193,7 +197,7 @@ Module Federation で公開するエクスポート定義です。
 
 ### `src/building/compilePlan.ts`
 
-建物生成の中心です。`BuildingPlan` を `BoxPart[]` に変換します。壁生成、開口処理、共有壁の除去、外部地面生成、重複 box 除去を担当します。
+建物生成の中心です。`BuildingPlan` を `BoxPart[]` に変換します。壁生成、開口処理、共有壁の区間除去、外部地面生成、重複 box 除去を担当します。
 
 主な定義:
 
@@ -209,6 +213,7 @@ Module Federation で公開するエクスポート定義です。
 
 - `compileBuildingPlan(plan)`
   - `BuildingPlan` から最終的な `BoxPart[]` を生成します。
+  - 入口で `plan.unit` を使って plan 内の寸法を実座標へ変換します。
   - 外部地面、各部屋、重複除去をまとめます。
 - `compileExteriorGround(plan)`
   - 部屋全体の外接範囲から、外部地面 `exterior:ground` を生成します。
@@ -219,15 +224,16 @@ Module Federation で公開するエクスポート定義です。
 - `compileRoom(plan, room)`
   - 1 部屋から床、天井、壁、柱の `BoxPart` を生成します。
   - 部屋の material key は `plan.materialKeys.room` に `room.material` を重ねて決めます。
-  - 共有壁はここでスキップします。
-- `isSharedWallOwnedByAnotherRoom(rooms, room, side)`
-  - 指定 wall が他の部屋と共有され、かつ他の部屋が所有すべきかを判定します。
-- `areOppositeWallsTouching(room, side, other)`
-  - 指定方向の壁が他部屋の反対側壁と接しているかを判定します。
+  - 共有壁は壁全体をスキップせず、他の部屋が所有する共有区間だけを全高の開口として差し引きます。
+- `getSharedWallOpeningsOwnedByAnotherRoom(rooms, room, side, floorHeight)`
+  - 指定 wall 上で、辞書順で先の部屋が所有する共有区間を全高の開口として返します。
+  - 部屋サイズが違う場合でも、非共有区間の壁は残します。
+- `getOppositeWallOverlap(room, side, other)`
+  - 指定方向の壁が他部屋の反対側壁と接しているかを調べ、重なった区間を壁ローカル座標で返します。
 - `getRoomBoundary(room)`
   - 部屋の `minX`, `maxX`, `minZ`, `maxZ` を返します。
-- `rangesOverlap(aMin, aMax, bMin, bMax)`
-  - 2 つの範囲が重なっているかを判定します。
+- `rangeIntersection(aMin, aMax, bMin, bMax)`
+  - 2 つの範囲の重なり区間を返します。
 - `nearlyEqual(a, b)`
   - `EPSILON` を使って値がほぼ等しいか判定します。
 - `dedupeExactBoxParts(parts)`

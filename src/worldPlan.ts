@@ -1,6 +1,7 @@
 import type { BuildingPlan } from './building/types'
 
 export const worldBuildingPlan: BuildingPlan = {
+  unit: 1,
   floorHeight: 5.5,
   wallThickness: 0.22,
   slabThickness: 0.12,

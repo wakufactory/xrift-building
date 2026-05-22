@@ -8,6 +8,7 @@ export type BoxPartColor = ColorRepresentation | Vec3
 export type WallColorMap = Partial<Record<WallSide, BoxPartColor>>
 
 export type BuildingPlan = {
+  unit?: number
   floorHeight: number
   wallThickness: number
   slabThickness: number

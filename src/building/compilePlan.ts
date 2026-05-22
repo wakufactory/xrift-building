@@ -17,13 +17,68 @@ const OPENING_DEFAULTS = {
 const EPSILON = 0.001
 
 export function compileBuildingPlan(plan: BuildingPlan): BoxPart[] {
+  const worldPlan = scalePlanToWorldUnits(plan)
+
   // 建物コンパイルの出力は、単一のフラットな BoxPart 配列に統一する。
   // 描画と物理の両方がこの中間表現を使うため、生成される建築要素は
   // すべて軸に沿った box として表現できる必要がある。
   return dedupeExactBoxParts([
-    ...compileExteriorGround(plan),
-    ...plan.rooms.flatMap((room) => compileRoom(plan, room)),
+    ...compileExteriorGround(worldPlan),
+    ...worldPlan.rooms.flatMap((room) => compileRoom(worldPlan, room)),
   ])
+}
+
+function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
+  const unit = plan.unit ?? 1
+
+  if (unit === 1) {
+    return plan
+  }
+
+  return {
+    ...plan,
+    unit: 1,
+    floorHeight: plan.floorHeight * unit,
+    wallThickness: plan.wallThickness * unit,
+    slabThickness: plan.slabThickness * unit,
+    pillar: plan.pillar ? {
+      ...plan.pillar,
+      thickness: scaleOptional(plan.pillar.thickness, unit),
+    } : undefined,
+    exteriorGround: plan.exteriorGround === false ? false : plan.exteriorGround ? {
+      ...plan.exteriorGround,
+      margin: scaleOptional(plan.exteriorGround.margin, unit),
+      thickness: scaleOptional(plan.exteriorGround.thickness, unit),
+    } : undefined,
+    rooms: plan.rooms.map((room) => ({
+      ...room,
+      position: scaleVec2(room.position, unit),
+      size: scaleVec2(room.size, unit),
+      doors: room.doors?.map((opening) => scaleOpening(opening, unit, true)),
+      windows: room.windows?.map((opening) => scaleOpening(opening, unit, false)),
+    })),
+  }
+}
+
+function scaleOptional(value: number | undefined, unit: number): number | undefined {
+  return value === undefined ? undefined : value * unit
+}
+
+function scaleVec2(value: [number, number], unit: number): [number, number] {
+  return [value[0] * unit, value[1] * unit]
+}
+
+function scaleOpening(opening: OpeningSpec, unit: number, isDoor: boolean): OpeningSpec {
+  const defaultBottom = isDoor ? OPENING_DEFAULTS.doorBottom : OPENING_DEFAULTS.windowBottom
+  const defaultHeight = isDoor ? OPENING_DEFAULTS.doorHeight : OPENING_DEFAULTS.windowHeight
+
+  return {
+    ...opening,
+    offset: opening.offset * unit,
+    width: opening.width * unit,
+    bottom: (opening.bottom ?? defaultBottom) * unit,
+    height: (opening.height ?? defaultHeight) * unit,
+  }
 }
 
 function compileExteriorGround(plan: BuildingPlan): BoxPart[] {
@@ -105,17 +160,11 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   ]
 
   for (const side of ['north', 'south', 'east', 'west'] as WallSide[]) {
-    // 隣接する部屋は同じ境界面を共有することがある。同じ面に mesh と
-    // collider が二重生成されないよう、辞書順で先の部屋だけが共有壁を
-    // 所有して生成する。
-    if (isSharedWallOwnedByAnotherRoom(plan.rooms, room, side)) {
-      continue
-    }
-
     // ドアと窓は、壁ローカル座標上の矩形開口として扱う。壁生成では
     // まず一枚の壁からそれらの開口を引き、残った矩形を独立した
     // box セグメントとして出力する。
     const wallOpenings = [
+      ...getSharedWallOpeningsOwnedByAnotherRoom(plan.rooms, room, side, plan.floorHeight),
       ...normalizeOpenings(room.doors ?? [], side, true),
       ...normalizeOpenings(room.windows ?? [], side, false),
     ]
@@ -140,42 +189,60 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   return parts
 }
 
-function isSharedWallOwnedByAnotherRoom(rooms: RoomSpec[], room: RoomSpec, side: WallSide): boolean {
-  // 共有壁とみなす条件は、境界線が接していて、かつ壁方向に範囲が
-  // 重なっていること。単に同じ向きの平行壁は別物として残す。
-  return rooms.some((other) => {
-    if (other.id === room.id) return false
-    if (!areOppositeWallsTouching(room, side, other)) return false
+function getSharedWallOpeningsOwnedByAnotherRoom(
+  rooms: RoomSpec[],
+  room: RoomSpec,
+  side: WallSide,
+  floorHeight: number,
+): OpeningSpec[] {
+  // 隣接する部屋は同じ境界面を共有することがある。同じ面に mesh と
+  // collider が二重生成されないよう、辞書順で先の部屋が共有区間を
+  // 所有する。ただし壁全体を skip すると、サイズ違いの部屋で非共有
+  // 部分まで抜けるため、他の部屋が所有する重複区間だけを全高の開口
+  // として差し引く。
+  return rooms.flatMap((other) => {
+    if (other.id === room.id) return []
+    if (other.id > room.id) return []
 
-    return other.id < room.id
+    const overlap = getOppositeWallOverlap(room, side, other)
+    if (!overlap) return []
+
+    return [{
+      side,
+      offset: (overlap.start + overlap.end) / 2,
+      width: overlap.end - overlap.start,
+      bottom: 0,
+      height: floorHeight,
+    }]
   })
 }
 
-function areOppositeWallsTouching(room: RoomSpec, side: WallSide, other: RoomSpec): boolean {
+function getOppositeWallOverlap(room: RoomSpec, side: WallSide, other: RoomSpec): { start: number, end: number } | undefined {
   const roomBounds = getRoomBoundary(room)
   const otherBounds = getRoomBoundary(other)
+  const [roomX, roomZ] = room.position
 
   switch (side) {
-    case 'north':
-      return (
-        nearlyEqual(roomBounds.maxZ, otherBounds.minZ) &&
-        rangesOverlap(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
-      )
-    case 'south':
-      return (
-        nearlyEqual(roomBounds.minZ, otherBounds.maxZ) &&
-        rangesOverlap(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
-      )
-    case 'east':
-      return (
-        nearlyEqual(roomBounds.maxX, otherBounds.minX) &&
-        rangesOverlap(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
-      )
-    case 'west':
-      return (
-        nearlyEqual(roomBounds.minX, otherBounds.maxX) &&
-        rangesOverlap(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
-      )
+    case 'north': {
+      if (!nearlyEqual(roomBounds.maxZ, otherBounds.minZ)) return undefined
+      const overlap = rangeIntersection(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
+      return overlap && { start: overlap.min - roomX, end: overlap.max - roomX }
+    }
+    case 'south': {
+      if (!nearlyEqual(roomBounds.minZ, otherBounds.maxZ)) return undefined
+      const overlap = rangeIntersection(roomBounds.minX, roomBounds.maxX, otherBounds.minX, otherBounds.maxX)
+      return overlap && { start: overlap.min - roomX, end: overlap.max - roomX }
+    }
+    case 'east': {
+      if (!nearlyEqual(roomBounds.maxX, otherBounds.minX)) return undefined
+      const overlap = rangeIntersection(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
+      return overlap && { start: overlap.min - roomZ, end: overlap.max - roomZ }
+    }
+    case 'west': {
+      if (!nearlyEqual(roomBounds.minX, otherBounds.maxX)) return undefined
+      const overlap = rangeIntersection(roomBounds.minZ, roomBounds.maxZ, otherBounds.minZ, otherBounds.maxZ)
+      return overlap && { start: overlap.min - roomZ, end: overlap.max - roomZ }
+    }
   }
 }
 
@@ -191,8 +258,15 @@ function getRoomBoundary(room: RoomSpec) {
   }
 }
 
-function rangesOverlap(aMin: number, aMax: number, bMin: number, bMax: number): boolean {
-  return Math.max(aMin, bMin) < Math.min(aMax, bMax) - EPSILON
+function rangeIntersection(aMin: number, aMax: number, bMin: number, bMax: number): { min: number, max: number } | undefined {
+  const min = Math.max(aMin, bMin)
+  const max = Math.min(aMax, bMax)
+
+  if (max - min <= EPSILON) {
+    return undefined
+  }
+
+  return { min, max }
 }
 
 function nearlyEqual(a: number, b: number): boolean {
