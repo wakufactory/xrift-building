@@ -1,9 +1,18 @@
-import type { BuildingPlan } from './types'
+import type { BuildingPlan } from './building/types'
 
-export const demoBuildingPlan: BuildingPlan = {
+export const worldBuildingPlan: BuildingPlan = {
   floorHeight: 5.5,
   wallThickness: 0.22,
   slabThickness: 0.12,
+  materialKeys: {
+    room: {
+      floor: 'floor:warm-wood',
+      wall: 'wall:plaster',
+      ceiling: 'ceiling:soft-white',
+    },
+    exteriorGround: 'ground:outdoor',
+    pillar: 'pillar:concrete',
+  },
   rooms: [
     {
       id: 'lobby',

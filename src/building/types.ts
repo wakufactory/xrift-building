@@ -7,8 +7,15 @@ export type BuildingPlan = {
   floorHeight: number
   wallThickness: number
   slabThickness: number
+  materialKeys: BuildingMaterialKeys
   exteriorGround?: ExteriorGroundSpec | false
   rooms: RoomSpec[]
+}
+
+export type BuildingMaterialKeys = {
+  room: RoomMaterials
+  exteriorGround: string
+  pillar: string
 }
 
 export type ExteriorGroundSpec = {

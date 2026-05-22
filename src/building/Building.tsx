@@ -2,22 +2,26 @@ import { useEffect, useMemo } from 'react'
 import { compileBuildingPlan } from './compilePlan'
 import { BuildingColliders } from './BuildingColliders'
 import { InstancedBoxLayer } from './InstancedBoxLayer'
+import type { BuildingMaterialCatalog } from './materials'
 import type { BoxPart, BuildingPlan } from './types'
 
-type BuildingProps = {
+export type BuildingProps = {
   plan: BuildingPlan
+  materials: BuildingMaterialCatalog
+  enableProfileLog?: boolean
 }
 
-export function Building({ plan }: BuildingProps) {
+export function Building({ plan, materials, enableProfileLog = true }: BuildingProps) {
   const parts = useMemo(() => compileBuildingPlan(plan), [plan])
 
   useEffect(() => {
+    if (!enableProfileLog) return
     console.log('[building profile]', createBuildingProfile(parts))
-  }, [parts])
+  }, [enableProfileLog, parts])
 
   return (
     <>
-      <InstancedBoxLayer parts={parts} />
+      <InstancedBoxLayer parts={parts} materials={materials} />
       <BuildingColliders parts={parts} />
     </>
   )

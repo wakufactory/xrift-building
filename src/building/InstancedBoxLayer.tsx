@@ -1,15 +1,16 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { BoxGeometry, Euler, InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three'
 import type { BoxPart } from './types'
-import { MATERIALS } from './materials'
+import { missingBuildingMaterial, type BuildingMaterialCatalog } from './materials'
 
 type InstancedBoxLayerProps = {
   parts: BoxPart[]
+  materials: BuildingMaterialCatalog
 }
 
 const unitBoxGeometry = new BoxGeometry(1, 1, 1)
 
-export function InstancedBoxLayer({ parts }: InstancedBoxLayerProps) {
+export function InstancedBoxLayer({ parts, materials }: InstancedBoxLayerProps) {
   const groups = useMemo(() => groupByMaterial(parts), [parts])
 
   return (
@@ -19,14 +20,24 @@ export function InstancedBoxLayer({ parts }: InstancedBoxLayerProps) {
           key={materialKey}
           materialKey={materialKey}
           parts={materialParts}
+          materials={materials}
         />
       ))}
     </>
   )
 }
 
-function InstancedBoxes({ materialKey, parts }: { materialKey: string; parts: BoxPart[] }) {
+function InstancedBoxes({
+  materialKey,
+  parts,
+  materials,
+}: {
+  materialKey: string
+  parts: BoxPart[]
+  materials: BuildingMaterialCatalog
+}) {
   const meshRef = useRef<InstancedMesh>(null)
+  const material = materials[materialKey] ?? missingBuildingMaterial
 
   useLayoutEffect(() => {
     const mesh = meshRef.current
@@ -58,7 +69,7 @@ function InstancedBoxes({ materialKey, parts }: { materialKey: string; parts: Bo
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial {...MATERIALS[materialKey as keyof typeof MATERIALS]} />
+      <meshStandardMaterial {...material} />
     </instancedMesh>
   )
 }

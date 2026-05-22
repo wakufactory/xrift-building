@@ -7,12 +7,6 @@ type WallSegment = {
   top: number
 }
 
-const DEFAULT_MATERIALS: RoomMaterials = {
-  floor: 'floor:warm-wood',
-  wall: 'wall:plaster',
-  ceiling: 'ceiling:soft-white',
-}
-
 const OPENING_DEFAULTS = {
   doorBottom: 0,
   doorHeight: 2.15,
@@ -54,7 +48,7 @@ function compileExteriorGround(plan: BuildingPlan): BoxPart[] {
       // しないように、外部地面だけごくわずかに下げている。
       position: [centerX, -thickness / 2 - 0.002, centerZ],
       size: [width, thickness, depth],
-      materialKey: ground.materialKey ?? 'ground:outdoor',
+      materialKey: ground.materialKey ?? plan.materialKeys.exteriorGround,
       collider: true,
     },
   ]
@@ -83,7 +77,7 @@ function getRoomBounds(rooms: RoomSpec[]) {
 
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const materials: RoomMaterials = {
-    ...DEFAULT_MATERIALS,
+    ...plan.materialKeys.room,
     ...room.material,
   }
   const [x, z] = room.position
@@ -395,7 +389,7 @@ function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
     kind: 'pillar',
     position: [x + dx, y, z + dz],
     size: [pillarSize, pillarHeight, pillarSize],
-    materialKey: 'pillar:concrete',
+    materialKey: plan.materialKeys.pillar,
     collider: true,
   }))
 }
