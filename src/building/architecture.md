@@ -105,6 +105,7 @@ xrift-building-world/
 - `worldBuildingMaterials`
   - `BuildingMaterialCatalog` 型の辞書です。
   - `floor:warm-wood`, `wall:plaster` などの material key を Three.js の `meshStandardMaterial` parameters に対応させます。
+  - `texture.map` で `public/` 配下の画像を指定できます。XRift 配信時の asset path に合わせるため、`textures/warm-wood.svg` のように `baseUrl` からの相対パスで書きます。
   - `src/building/` 側はこの実体を import しません。
 
 ### `src/dev.tsx`
@@ -198,8 +199,10 @@ Module Federation で公開するエクスポート定義です。
 主な定義:
 
 - `BuildingMaterialCatalog`
-  - `Record<string, MeshStandardMaterialParameters>`
-  - material key から Three.js material parameters への辞書型です。
+  - `Record<string, BuildingMaterialParameters>`
+  - material key から Three.js material parameters と texture 指定への辞書型です。
+  - `texture.map` は `public/` からの相対パスです。`InstancedBoxLayer` が `useXRift().baseUrl` と結合して読み込みます。
+  - `texture.repeat`, `texture.offset`, `texture.rotation`, `texture.wrap` で basic な UV 設定を指定できます。
 - `missingBuildingMaterial`
   - catalog に存在しない `materialKey` が指定された場合の fallback material です。
 

@@ -2,9 +2,13 @@ import type { BuildingMaterialCatalog } from './building/materials'
 
 export const worldBuildingMaterials = {
   'floor:warm-wood': {
-    color: '#9b6a3d',
+    color: '#f4e5d8',
     roughness: 0.78,
     metalness: 0,
+    texture: {
+      map: 'textures/warm-wood.svg',
+      repeat: [4, 5],
+    },
   },
   'floor:stone': {
     color: '#747b7c',
