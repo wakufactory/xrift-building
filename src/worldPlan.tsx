@@ -3,6 +3,7 @@ import { BuildingWorld } from './building/BuildingWorld'
 import { worldBuildingMaterials } from './worldMaterials'
 import { BoxBatchProvider, BoxLayer } from './building/InstancedBoxLayer'
 import { BoxColliders } from './building/BuildingColliders'
+import { RoomObject, WallObject } from './building/RoomObject'
 
 /// north -z east +x south +z west x
 
@@ -170,7 +171,21 @@ export function Buildings() {
         materials={worldBuildingMaterials}
         position={[0,0,0]}
         enableProfileLog={true}
-      />
+      >
+        <RoomObject roomId="2-gallery" position={[0, 0]} >
+          <mesh rotation={[0, Math.PI / 4, 0]} position={[0, 1.5, 0]}>
+            <boxGeometry args={[0.5, 3, 0.5]} />
+            <meshStandardMaterial color={'#a020f0'} />
+          </mesh> 
+        </RoomObject>
+        <WallObject roomId="1-robby" side="east" offset={0} height={2} >
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[2, 2, 0.1]} />
+            <meshStandardMaterial color={'#f08080'} />
+          </mesh> 
+        </WallObject>
+
+      </BuildingWorld>
       <BuildingWorld
         id="floor-2"
         name="2F"

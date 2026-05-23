@@ -197,8 +197,12 @@ opening の `offset` は壁ローカル座標です。
 - `getRoomFloorFrame()` / `getRoomWallFrame()`
   - 配置可能範囲、壁の接線、室内向き法線など、より低レベルな frame 情報を返します。
 - `RoomObject` / `WallObject`
-  - children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
-  - `RoomObject.position` は部屋中心からの床ローカル `[x, z]`、`WallObject.position` は壁ローカル offset です。
+  - `BuildingWorld` 内で children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
+  - plan は `BuildingWorld` が `BuildingPlacementProvider` で context として渡します。
+  - `RoomObject.position` は部屋中心からの床ローカル `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
+- `useFloorPlacement()` / `useWallPlacement()`
+  - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
+  - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
 
 ### `BoxInstance` と `BoxPart`
 

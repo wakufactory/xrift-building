@@ -240,18 +240,39 @@ const frame = getWallPlacement(plan1, {
 children を直接囲んで配置したい場合は `RoomObject` / `WallObject` を使います。
 
 ```tsx
+import { BuildingWorld } from './building/BuildingWorld'
 import { RoomObject, WallObject } from './building/RoomObject'
 
-<RoomObject plan={plan1} roomId="2-gallery" position={[-2, 1]} height={0.35} rotationY={Math.PI / 2}>
-  {/* sofa mesh */}
-</RoomObject>
+<BuildingWorld plan={plan1} materials={worldBuildingMaterials}>
+  <RoomObject roomId="2-gallery" position={[-2, 1]} height={0.35} rotationY={Math.PI / 2}>
+    {/* sofa mesh */}
+  </RoomObject>
 
-<WallObject plan={plan1} roomId="2-gallery" side="north" position={2} height={1.6} inset={0.04}>
-  {/* wall-mounted mesh. local +Z faces into the room. */}
-</WallObject>
+  <WallObject roomId="2-gallery" side="north" offset={2} height={1.6} inset={0.04}>
+    {/* wall-mounted mesh. local +Z faces into the room. */}
+  </WallObject>
+</BuildingWorld>
 ```
 
-`RoomObject` の `position` は部屋中心からの床ローカル `[x, z]` です。`WallObject` の `position` は壁ローカルの offset です。
+`RoomObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` の `position` は部屋中心からの床ローカル `[x, z]` です。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。
+
+component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useWallPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
+
+```tsx
+import { useWallPlacement } from './building/RoomObject'
+
+function PictureFrame() {
+  const frame = useWallPlacement({
+    roomId: '2-gallery',
+    side: 'north',
+    offset: 2,
+    height: 1.6,
+    inset: 0.04,
+  })
+
+  return <group position={frame.position} rotation={frame.rotation}>{/* mesh */}</group>
+}
+```
 
 ## 外部地面
 
