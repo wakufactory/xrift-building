@@ -204,6 +204,55 @@ surfaces: {
 - `noCollider: true` は collider を作りません。
 - `hidden: true` だけなら、見えない壁や床として衝突だけ残ります。
 
+## インテリア object の配置
+
+床や壁を基準に家具、額、照明などを置く場合は `getFloorPlacement()` と `getWallPlacement()` を使います。どちらも plan の `unit` を反映した `position` / `rotation` を返します。
+
+```tsx
+import { getFloorPlacement, getWallPlacement } from './building/placement'
+
+const sofa = getFloorPlacement(plan1, {
+  roomId: '2-gallery',
+  offset: [-2, 1],
+  height: 0.35,
+  rotationY: Math.PI / 2,
+})
+
+const frame = getWallPlacement(plan1, {
+  roomId: '2-gallery',
+  side: 'north',
+  offset: 2,
+  height: 1.6,
+  inset: 0.04,
+})
+
+<group position={sofa.position} rotation={sofa.rotation}>
+  {/* sofa mesh */}
+</group>
+
+<group position={frame.position} rotation={frame.rotation}>
+  {/* wall-mounted mesh. local +Z faces into the room. */}
+</group>
+```
+
+床の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。`height` は床上面からの高さ、`inset` は壁の室内面から部屋内側へずらす距離です。
+
+children を直接囲んで配置したい場合は `RoomObject` / `WallObject` を使います。
+
+```tsx
+import { RoomObject, WallObject } from './building/RoomObject'
+
+<RoomObject plan={plan1} roomId="2-gallery" position={[-2, 1]} height={0.35} rotationY={Math.PI / 2}>
+  {/* sofa mesh */}
+</RoomObject>
+
+<WallObject plan={plan1} roomId="2-gallery" side="north" position={2} height={1.6} inset={0.04}>
+  {/* wall-mounted mesh. local +Z faces into the room. */}
+</WallObject>
+```
+
+`RoomObject` の `position` は部屋中心からの床ローカル `[x, z]` です。`WallObject` の `position` は壁ローカルの offset です。
+
 ## 外部地面
 
 外部地面は、すべての部屋の外接範囲に余白を足した box として自動生成されます。
@@ -269,6 +318,41 @@ texture を使う場合は `public/` 以下にファイルを置き、`texture.m
 XRift 配信時の asset path に合わせるため、内部では `useXRift().baseUrl` と結合して読み込まれます。`/textures/tile.png` のように先頭 `/` を付けても取り除かれますが、plan では `textures/tile.png` の形に揃えるのが分かりやすいです。
 
 material key が catalog に存在しない場合は、ピンク色の fallback material が使われます。
+
+## 建物以外の box を描画する
+
+家具やエクステリアのような建物 plan に入れない box は、`BoxLayer` に `BoxInstance[]` と同じ material catalog を渡して描画できます。collider が必要なものだけ `BoxColliders` に渡します。
+
+`BoxBatchProvider` の配下に置くと、複数の `BuildingWorld` と直接置いた `BoxLayer` がまとめて描画されます。描画は material key ごとに 1 つの `InstancedMesh` になり、`source` でどの `BuildingWorld` / `BoxLayer` 由来かを区別できます。
+
+```tsx
+import { BoxBatchProvider, BoxColliders, BoxLayer, type BoxInstance } from '@xrift/building-world'
+import { worldBuildingMaterials } from './worldMaterials'
+
+const furniture: BoxInstance[] = [
+  {
+    id: 'bench',
+    position: [4, 0.35, 2],
+    size: [2.4, 0.7, 0.55],
+    materialKey: 'furniture:neutral',
+  },
+]
+
+export function Furniture() {
+  return (
+    <BoxBatchProvider>
+      <BoxLayer
+        id="furniture"
+        parts={furniture}
+        materials={worldBuildingMaterials}
+      />
+      <BoxColliders parts={furniture} />
+    </BoxBatchProvider>
+  )
+}
+```
+
+`BoxInstance.color` を指定すると、material key は共通のまま instance ごとに色だけ変えられます。統合後の mesh では `mesh.userData.boxInstances[instanceId]` に元の box id と `source` が入ります。
 
 ## 複数階や複数棟
 
