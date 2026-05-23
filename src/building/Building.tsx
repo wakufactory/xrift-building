@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { compileBuildingPlan } from './compilePlan'
-import { BuildingColliders } from './BuildingColliders'
 import { BoxLayer } from './InstancedBoxLayer'
 import type { BuildingMaterialCatalog } from './materials'
 import type { BoxInstanceSource, BoxPart, BuildingPlan } from './types'
@@ -31,8 +30,7 @@ export function Building({ plan, materials, source, enableProfileLog = true }: B
 
   return (
     <>
-      <BoxLayer parts={sourcedParts} materials={materials} />
-      <BuildingColliders parts={parts} />
+      <BoxLayer parts={sourcedParts} materials={materials} collider />
     </>
   )
 }

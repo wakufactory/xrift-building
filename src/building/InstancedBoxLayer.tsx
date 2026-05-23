@@ -1,15 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, forwardRef, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ForwardedRef, type ReactNode } from 'react'
 import { useTexture } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useXRift } from '@xrift/world-components'
 import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, MirroredRepeatWrapping, Quaternion, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from 'three'
 import type { BoxInstance, BoxInstanceSource, BoxPartColor } from './types'
 import { missingBoxMaterial, type BoxMaterialCatalog, type BoxMaterialParameters, type BoxTextureSpec } from './materials'
+import { BoxColliders } from './BuildingColliders'
 
 // BoxLayer に渡す box 配列、material catalog、識別情報を表す。
 export type BoxLayerProps = {
   id?: string
   label?: string
+  collider?: boolean
   parts: BoxInstance[]
   materials: BoxMaterialCatalog
 }
@@ -68,7 +70,10 @@ export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
 }
 
 // box instance 配列を描画する。Provider 配下では kind=boxLayer として登録だけを行う。
-export function BoxLayer({ id, label, parts, materials }: BoxLayerProps) {
+export const BoxLayer = forwardRef<Group, BoxLayerProps>(function BoxLayer(
+  { id, label, collider = false, parts, materials },
+  forwardedRef,
+) {
   const batchContext = useContext(BoxBatchContext)
   const autoId = useId()
   const source = useMemo(
@@ -80,6 +85,10 @@ export function BoxLayer({ id, label, parts, materials }: BoxLayerProps) {
     [autoId, id, label],
   )
   const groupRef = useRef<Group>(null)
+  const setGroupRefs = useCallback((group: Group | null) => {
+    groupRef.current = group
+    assignForwardedRef(forwardedRef, group)
+  }, [forwardedRef])
   const unregisterRef = useRef<(() => void) | null>(null)
   const entryRef = useRef<BoxBatchEntry | null>(null)
   const updateRegistration = useCallback(() => {
@@ -118,10 +127,31 @@ export function BoxLayer({ id, label, parts, materials }: BoxLayerProps) {
   })
 
   if (batchContext) {
-    return <group ref={groupRef} />
+    return (
+      <group ref={setGroupRefs}>
+        {collider && <BoxColliders parts={parts} />}
+      </group>
+    )
   }
 
-  return <BoxLayerRenderer parts={applySource(parts, source)} materials={materials} />
+  return (
+    <group ref={setGroupRefs}>
+      <BoxLayerRenderer parts={applySource(parts, source)} materials={materials} />
+      {collider && <BoxColliders parts={parts} />}
+    </group>
+  )
+})
+
+// forwardRef で受け取った object ref / callback ref に group を渡す。
+function assignForwardedRef(ref: ForwardedRef<Group>, value: Group | null) {
+  if (typeof ref === 'function') {
+    ref(value)
+    return
+  }
+
+  if (ref) {
+    ref.current = value
+  }
 }
 
 // 登録済み entry が同じ描画内容かどうかを判定する。

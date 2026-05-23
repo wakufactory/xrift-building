@@ -342,12 +342,12 @@ material key が catalog に存在しない場合は、ピンク色の fallback 
 
 ## 建物以外の box を描画する
 
-家具やエクステリアのような建物 plan に入れない box は、`BoxLayer` に `BoxInstance[]` と同じ material catalog を渡して描画できます。collider が必要なものだけ `BoxColliders` に渡します。
+家具やエクステリアのような建物 plan に入れない box は、`BoxLayer` に `BoxInstance[]` と同じ material catalog を渡して描画できます。collider が必要な場合は `collider` prop を付けます。
 
 `BoxBatchProvider` の配下に置くと、複数の `BuildingWorld` と直接置いた `BoxLayer` がまとめて描画されます。描画は material key ごとに 1 つの `InstancedMesh` になり、`source` でどの `BuildingWorld` / `BoxLayer` 由来かを区別できます。
 
 ```tsx
-import { BoxBatchProvider, BoxColliders, BoxLayer, type BoxInstance } from '@xrift/building-world'
+import { BoxBatchProvider, BoxLayer, type BoxInstance } from '@xrift/building-world'
 import { worldBuildingMaterials } from './worldMaterials'
 
 const furniture: BoxInstance[] = [
@@ -366,14 +366,14 @@ export function Furniture() {
         id="furniture"
         parts={furniture}
         materials={worldBuildingMaterials}
+        collider
       />
-      <BoxColliders parts={furniture} />
     </BoxBatchProvider>
   )
 }
 ```
 
-`BoxInstance.color` を指定すると、material key は共通のまま instance ごとに色だけ変えられます。統合後の mesh では `mesh.userData.boxInstances[instanceId]` に元の box id と `source` が入ります。
+`BoxInstance.collider: false` を指定した box は、`BoxLayer collider` が有効でも collider を作りません。`BoxInstance.color` を指定すると、material key は共通のまま instance ごとに色だけ変えられます。統合後の mesh では `mesh.userData.boxInstances[instanceId]` に元の box id と `source` が入ります。
 
 ## 複数階や複数棟
 
