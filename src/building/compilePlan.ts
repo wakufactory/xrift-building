@@ -1,5 +1,6 @@
 import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomSpec, SurfaceSpec, Vec3, WallSide } from './types'
 
+// 壁ローカル座標上の矩形セグメントを表す。
 type WallSegment = {
   start: number
   end: number
@@ -7,6 +8,7 @@ type WallSegment = {
   top: number
 }
 
+// ドア・窓の省略値をまとめる。
 const OPENING_DEFAULTS = {
   doorBottom: 0,
   doorHeight: 2.15,
@@ -14,8 +16,10 @@ const OPENING_DEFAULTS = {
   windowHeight: 1.05,
 }
 
+// 浮動小数点の境界比較で使う許容誤差を表す。
 const EPSILON = 0.001
 
+// BuildingPlan を描画・物理用の BoxPart 配列へ変換する。
 export function compileBuildingPlan(plan: BuildingPlan): BoxPart[] {
   const worldPlan = scalePlanToWorldUnits(plan)
 
@@ -28,6 +32,7 @@ export function compileBuildingPlan(plan: BuildingPlan): BoxPart[] {
   ])
 }
 
+// plan.unit を考慮して plan 全体を world units に正規化する。
 function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
   const unit = plan.unit ?? 1
 
@@ -60,14 +65,17 @@ function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
   }
 }
 
+// optional な数値を unit 倍する。
 function scaleOptional(value: number | undefined, unit: number): number | undefined {
   return value === undefined ? undefined : value * unit
 }
 
+// Vec2 を unit 倍する。
 function scaleVec2(value: [number, number], unit: number): [number, number] {
   return [value[0] * unit, value[1] * unit]
 }
 
+// 開口設定を unit 倍し、省略値も world units に正規化する。
 function scaleOpening(opening: OpeningSpec, unit: number, isDoor: boolean): OpeningSpec {
   const defaultBottom = isDoor ? OPENING_DEFAULTS.doorBottom : OPENING_DEFAULTS.windowBottom
   const defaultHeight = isDoor ? OPENING_DEFAULTS.doorHeight : OPENING_DEFAULTS.windowHeight
@@ -81,6 +89,7 @@ function scaleOpening(opening: OpeningSpec, unit: number, isDoor: boolean): Open
   }
 }
 
+// 部屋群の外接矩形から外部地面の BoxPart を生成する。
 function compileExteriorGround(plan: BuildingPlan): BoxPart[] {
   if (plan.exteriorGround === false || plan.rooms.length === 0) {
     return []
@@ -109,6 +118,7 @@ function compileExteriorGround(plan: BuildingPlan): BoxPart[] {
   ]
 }
 
+// 部屋群全体の XZ 境界を計算する。
 function getRoomBounds(rooms: RoomSpec[]) {
   return rooms.reduce(
     (bounds, room) => {
@@ -130,6 +140,7 @@ function getRoomBounds(rooms: RoomSpec[]) {
   )
 }
 
+// 1 部屋から床、天井、壁、柱の BoxPart を生成する。
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size
@@ -193,6 +204,7 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   return parts
 }
 
+// 他の部屋が所有する共有壁区間を、この部屋側の開口として返す。
 function getSharedWallOpeningsOwnedByAnotherRoom(
   rooms: RoomSpec[],
   room: RoomSpec,
@@ -221,6 +233,7 @@ function getSharedWallOpeningsOwnedByAnotherRoom(
   })
 }
 
+// 隣接する反対向きの壁同士が重なる区間を壁ローカル座標で返す。
 function getOppositeWallOverlap(room: RoomSpec, side: WallSide, other: RoomSpec): { start: number, end: number } | undefined {
   const roomBounds = getRoomBoundary(room)
   const otherBounds = getRoomBoundary(other)
@@ -250,6 +263,7 @@ function getOppositeWallOverlap(room: RoomSpec, side: WallSide, other: RoomSpec)
   }
 }
 
+// Z 範囲の重なりを north 正方向の壁 offset 範囲に変換する。
 function zOverlapToNorthPositiveOffset(minZ: number, maxZ: number, roomZ: number): { start: number, end: number } {
   return {
     start: roomZ - maxZ,
@@ -257,6 +271,7 @@ function zOverlapToNorthPositiveOffset(minZ: number, maxZ: number, roomZ: number
   }
 }
 
+// 1 部屋の XZ 境界を計算する。
 function getRoomBoundary(room: RoomSpec) {
   const [x, z] = room.position
   const [width, depth] = room.size
@@ -269,6 +284,7 @@ function getRoomBoundary(room: RoomSpec) {
   }
 }
 
+// 2 つの一次元範囲の交差を計算する。
 function rangeIntersection(aMin: number, aMax: number, bMin: number, bMax: number): { min: number, max: number } | undefined {
   const min = Math.max(aMin, bMin)
   const max = Math.min(aMax, bMax)
@@ -280,10 +296,12 @@ function rangeIntersection(aMin: number, aMax: number, bMin: number, bMax: numbe
   return { min, max }
 }
 
+// 2 つの数値が EPSILON 未満の差で等しいか判定する。
 function nearlyEqual(a: number, b: number): boolean {
   return Math.abs(a - b) < EPSILON
 }
 
+// 完全一致する BoxPart だけを重複除去する。
 function dedupeExactBoxParts(parts: BoxPart[]): BoxPart[] {
   const seen = new Set<string>()
 
@@ -308,10 +326,12 @@ function dedupeExactBoxParts(parts: BoxPart[]): BoxPart[] {
   })
 }
 
+// 重複判定用に数値を固定桁の文字列へ変換する。
 function toDedupeKey(value: number): string {
   return value.toFixed(4)
 }
 
+// 重複判定用に色指定を文字列へ変換する。
 function colorToDedupeKey(color: BoxPartColor): string {
   if (Array.isArray(color)) {
     return color.map(toDedupeKey).join(',')
@@ -320,6 +340,7 @@ function colorToDedupeKey(color: BoxPartColor): string {
   return String(color)
 }
 
+// 指定 side の開口だけを取り出し、省略値を補う。
 function normalizeOpenings(openings: OpeningSpec[], side: WallSide, isDoor: boolean): OpeningSpec[] {
   return openings
     .filter((opening) => opening.side === side)
@@ -330,6 +351,7 @@ function normalizeOpenings(openings: OpeningSpec[], side: WallSide, isDoor: bool
     }))
 }
 
+// 1 面の壁を開口で分割し、BoxPart 群として生成する。
 function compileWall(input: {
   roomId: string
   side: WallSide
@@ -369,6 +391,7 @@ function compileWall(input: {
   })
 }
 
+// SurfaceSpec の hidden / noCollider を BoxPart に反映する。
 function applySurfaceSpec(part: BoxPart, surface: SurfaceSpec | undefined): BoxPart {
   if (!surface) {
     return part
@@ -381,6 +404,7 @@ function applySurfaceSpec(part: BoxPart, surface: SurfaceSpec | undefined): BoxP
   }
 }
 
+// 壁全体の矩形から開口を引き、残った壁セグメントを返す。
 function splitWallSegments(wallLength: number, floorHeight: number, openings: OpeningSpec[]): WallSegment[] {
   // 最初は壁全面を表す 1 枚の矩形から始める。各開口は現在のセグメント
   // 集合から矩形の穴をくり抜き、残った矩形が box instance になる。
@@ -410,6 +434,7 @@ function splitWallSegments(wallLength: number, floorHeight: number, openings: Op
   return segments.filter((segment) => segment.end - segment.start > EPSILON && segment.top - segment.bottom > EPSILON)
 }
 
+// 1 つの壁セグメントから 1 つの開口矩形を差し引く。
 function subtractOpening(segment: WallSegment, opening: WallSegment): WallSegment[] {
   const overlapStart = Math.max(segment.start, opening.start)
   const overlapEnd = Math.min(segment.end, opening.end)
@@ -450,6 +475,7 @@ function subtractOpening(segment: WallSegment, opening: WallSegment): WallSegmen
   return pieces
 }
 
+// 壁ローカルのセグメント中心を world-space の box 中心へ変換する。
 function wallPartPosition(
   side: WallSide,
   roomX: number,
@@ -473,6 +499,7 @@ function wallPartPosition(
   }
 }
 
+// 壁の向きに応じて box size を X/Z 軸へ割り当てる。
 function wallPartSize(side: WallSide, length: number, height: number, wallThickness: number): Vec3 {
   // 壁はすべて回転なしの box として生成する。向きは、長辺を X に置くか
   // Z に置くかで表現する。
@@ -483,6 +510,7 @@ function wallPartSize(side: WallSide, length: number, height: number, wallThickn
   return [wallThickness, height, length]
 }
 
+// 部屋の四隅に柱 BoxPart を生成する。
 function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size

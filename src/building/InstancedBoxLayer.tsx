@@ -1,19 +1,213 @@
-import { useEffect, useLayoutEffect, useMemo } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTexture } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useXRift } from '@xrift/world-components'
-import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, MirroredRepeatWrapping, Quaternion, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from 'three'
-import type { BoxPart, BoxPartColor } from './types'
-import { missingBuildingMaterial, type BuildingMaterialCatalog, type BuildingMaterialParameters, type BuildingTextureSpec } from './materials'
+import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, MirroredRepeatWrapping, Quaternion, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from 'three'
+import type { BoxInstance, BoxInstanceSource, BoxPartColor } from './types'
+import { missingBoxMaterial, type BoxMaterialCatalog, type BoxMaterialParameters, type BoxTextureSpec } from './materials'
 
-type InstancedBoxLayerProps = {
-  parts: BoxPart[]
-  materials: BuildingMaterialCatalog
+// BoxLayer に渡す box 配列、material catalog、生成元情報を表す。
+export type BoxLayerProps = {
+  parts: BoxInstance[]
+  materials: BoxMaterialCatalog
+  source?: BoxInstanceSource
+}
+
+// 既存の InstancedBoxLayer API と互換にするための props alias。
+export type InstancedBoxLayerProps = BoxLayerProps
+
+// BoxBatchProvider に渡す children を表す。
+export type BoxBatchProviderProps = {
+  children: ReactNode
+}
+
+// Provider に登録される 1 つの BoxLayer の描画情報を表す。
+type BoxBatchEntry = {
+  id: string
+  parts: BoxInstance[]
+  materials: BoxMaterialCatalog
+  source: BoxInstanceSource
+  matrixWorld: Matrix4
+}
+
+// BoxLayer が Provider に自身を登録するための context 値を表す。
+type BoxBatchContextValue = {
+  register: (entry: BoxBatchEntry) => () => void
 }
 
 const unitBoxGeometry = createUnitBoxGeometry()
+const BoxBatchContext = createContext<BoxBatchContextValue | null>(null)
 
-export function InstancedBoxLayer({ parts, materials }: InstancedBoxLayerProps) {
+// 配下の BoxLayer を集約し、material key ごとにまとめて描画する。
+export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
+  const [entries, setEntries] = useState<BoxBatchEntry[]>([])
+  const register = useCallback((entry: BoxBatchEntry) => {
+    setEntries((current) => {
+      const existing = current.find((item) => item.id === entry.id)
+      if (existing && areEntriesEqual(existing, entry)) {
+        return current
+      }
+
+      const next = current.filter((item) => item.id !== entry.id)
+      return [...next, entry]
+    })
+
+    return () => {
+      setEntries((current) => current.filter((item) => item.id !== entry.id))
+    }
+  }, [])
+  const contextValue = useMemo(() => ({ register }), [register])
+
+  return (
+    <BoxBatchContext.Provider value={contextValue}>
+      {children}
+      <BoxLayerRenderer {...mergeBatchEntries(entries)} />
+    </BoxBatchContext.Provider>
+  )
+}
+
+// box instance 配列を描画する。Provider 配下では登録だけを行う。
+export function BoxLayer({ parts, materials, source: explicitSource }: BoxLayerProps) {
+  const batchContext = useContext(BoxBatchContext)
+  const sourceId = useId()
+  const explicitSourceKind = explicitSource?.kind
+  const explicitSourceId = explicitSource?.id
+  const explicitSourceLabel = explicitSource?.label
+  const source = useMemo(
+    () => ({
+      kind: explicitSourceKind ?? 'boxLayer',
+      id: explicitSourceId ?? sourceId,
+      label: explicitSourceLabel,
+    }),
+    [explicitSourceId, explicitSourceKind, explicitSourceLabel, sourceId],
+  )
+  const groupRef = useRef<Group>(null)
+  const unregisterRef = useRef<(() => void) | null>(null)
+  const entryRef = useRef<BoxBatchEntry | null>(null)
+  const updateRegistration = useCallback(() => {
+    if (!batchContext || !groupRef.current) return
+
+    groupRef.current.updateWorldMatrix(true, false)
+    const matrixWorld = groupRef.current.matrixWorld.clone()
+    const entry = {
+      id: sourceId,
+      parts,
+      materials,
+      source,
+      matrixWorld,
+    }
+    if (entryRef.current && areEntriesEqual(entryRef.current, entry)) return
+
+    unregisterRef.current?.()
+    unregisterRef.current = batchContext.register(entry)
+    entryRef.current = entry
+  }, [batchContext, materials, parts, source, sourceId])
+
+  useLayoutEffect(() => {
+    updateRegistration()
+  }, [updateRegistration])
+
+  useEffect(() => {
+    return () => {
+      unregisterRef.current?.()
+      unregisterRef.current = null
+      entryRef.current = null
+    }
+  }, [])
+
+  useFrame(() => {
+    updateRegistration()
+  })
+
+  if (batchContext) {
+    return <group ref={groupRef} />
+  }
+
+  return <BoxLayerRenderer parts={applySource(parts, source)} materials={materials} />
+}
+
+// 登録済み entry が同じ描画内容かどうかを判定する。
+function areEntriesEqual(a: BoxBatchEntry, b: BoxBatchEntry) {
+  return (
+    a.parts === b.parts &&
+    a.materials === b.materials &&
+    areSourcesEqual(a.source, b.source) &&
+    matricesEqual(a.matrixWorld, b.matrixWorld)
+  )
+}
+
+// box instance の生成元情報が同じかどうかを判定する。
+function areSourcesEqual(a: BoxInstanceSource, b: BoxInstanceSource) {
+  return a.kind === b.kind && a.id === b.id && a.label === b.label
+}
+
+// Matrix4 の各要素を許容誤差付きで比較する。
+function matricesEqual(a: Matrix4, b: Matrix4) {
+  const aElements = a.elements
+  const bElements = b.elements
+
+  for (let index = 0; index < aElements.length; index += 1) {
+    if (Math.abs(aElements[index] - bElements[index]) > 0.000001) {
+      return false
+    }
+  }
+
+  return true
+}
+
+// Provider に登録された BoxLayer 群を 1 つの描画入力へ統合する。
+function mergeBatchEntries(entries: BoxBatchEntry[]): Pick<BoxLayerProps, 'parts' | 'materials'> {
+  const materials: BoxMaterialCatalog = {}
+  const parts: BoxInstance[] = []
+
+  for (const entry of entries) {
+    Object.assign(materials, entry.materials)
+
+    for (const part of entry.parts) {
+      parts.push(transformPart(part, entry.matrixWorld, part.source ?? entry.source))
+    }
+  }
+
+  return { parts, materials }
+}
+
+// BoxLayer の親 transform を BoxInstance の position / rotation / size に焼き込む。
+function transformPart(part: BoxInstance, matrixWorld: Matrix4, source: BoxInstanceSource): BoxInstance {
+  const localMatrix = new Matrix4()
+  const worldMatrix = new Matrix4()
+  const position = new Vector3()
+  const scale = new Vector3()
+  const quaternion = new Quaternion()
+  const euler = new Euler()
+
+  position.set(...part.position)
+  scale.set(...part.size)
+  euler.set(part.rotation?.[0] ?? 0, part.rotation?.[1] ?? 0, part.rotation?.[2] ?? 0)
+  quaternion.setFromEuler(euler)
+  localMatrix.compose(position, quaternion, scale)
+  worldMatrix.multiplyMatrices(matrixWorld, localMatrix)
+  worldMatrix.decompose(position, quaternion, scale)
+  euler.setFromQuaternion(quaternion)
+
+  return {
+    ...part,
+    position: [position.x, position.y, position.z],
+    size: [scale.x, scale.y, scale.z],
+    rotation: [euler.x, euler.y, euler.z],
+    source,
+  }
+}
+
+// Provider を使わない直接描画時にも source 情報を補う。
+function applySource(parts: BoxInstance[], source: BoxInstanceSource): BoxInstance[] {
+  return parts.map((part) => ({
+    ...part,
+    source: part.source ?? source,
+  }))
+}
+
+// BoxInstance 配列を material key ごとに分けて instanced mesh として描画する。
+function BoxLayerRenderer({ parts, materials }: Pick<BoxLayerProps, 'parts' | 'materials'>) {
   const visibleParts = useMemo(() => parts.filter((part) => part.visible !== false), [parts])
   const groups = useMemo(() => groupByMaterial(visibleParts), [visibleParts])
 
@@ -31,16 +225,20 @@ export function InstancedBoxLayer({ parts, materials }: InstancedBoxLayerProps) 
   )
 }
 
+// 既存の InstancedBoxLayer 名を BoxLayer として維持する。
+export const InstancedBoxLayer = BoxLayer
+
+// material key に対応する material を選び、texture 有無で描画経路を分ける。
 function InstancedBoxes({
   materialKey,
   parts,
   materials,
 }: {
   materialKey: string
-  parts: BoxPart[]
-  materials: BuildingMaterialCatalog
+  parts: BoxInstance[]
+  materials: BoxMaterialCatalog
 }) {
-  const material = materials[materialKey] ?? missingBuildingMaterial
+  const material = materials[materialKey] ?? missingBoxMaterial
 
   if (material.texture) {
     return (
@@ -55,12 +253,13 @@ function InstancedBoxes({
   return <PlainInstancedBoxes material={material} parts={parts} />
 }
 
+// texture を使わない material で instanced box を描画する。
 function PlainInstancedBoxes({
   material,
   parts,
 }: {
-  material: BuildingMaterialParameters
-  parts: BoxPart[]
+  material: BoxMaterialParameters
+  parts: BoxInstance[]
 }) {
   const sharedMaterial = useMemo(() => {
     const { color: _color, texture: _texture, ...rest } = material
@@ -83,14 +282,15 @@ function PlainInstancedBoxes({
   )
 }
 
+// texture 付き material で instanced box を描画する。
 function TexturedInstancedBoxes({
   material,
   texture,
   parts,
 }: {
-  material: BuildingMaterialParameters
-  texture: BuildingTextureSpec
-  parts: BoxPart[]
+  material: BoxMaterialParameters
+  texture: BoxTextureSpec
+  parts: BoxInstance[]
 }) {
   const { baseUrl } = useXRift()
   const textureUrl = resolveTextureUrl(baseUrl, texture.map)
@@ -128,6 +328,7 @@ function TexturedInstancedBoxes({
   )
 }
 
+// InstancedMesh に instance matrix と instance color を流し込む。
 function InstancedBoxesMesh({
   baseColor,
   material,
@@ -135,7 +336,7 @@ function InstancedBoxesMesh({
 }: {
   baseColor: BoxPartColor
   material: MeshStandardMaterial
-  parts: BoxPart[]
+  parts: BoxInstance[]
 }) {
   const invalidate = useThree((state) => state.invalidate)
   const instanceColors = useMemo(() => {
@@ -175,6 +376,11 @@ function InstancedBoxesMesh({
   useLayoutEffect(() => {
     mesh.instanceColor = instanceColorAttribute
     mesh.instanceColor.needsUpdate = true
+    mesh.userData.boxInstances = parts.map((part) => ({
+      id: part.id,
+      materialKey: part.materialKey,
+      source: part.source,
+    }))
 
     const matrix = new Matrix4()
     const euler = new Euler()
@@ -199,6 +405,7 @@ function InstancedBoxesMesh({
   return <primitive object={mesh} />
 }
 
+// XRift の baseUrl と texture path から実際の texture URL を解決する。
 function resolveTextureUrl(baseUrl: string, path: string) {
   if (/^(https?:|data:|blob:)/.test(path)) {
     return path
@@ -207,7 +414,8 @@ function resolveTextureUrl(baseUrl: string, path: string) {
   return `${baseUrl}${path.replace(/^\/+/, '')}`
 }
 
-function configureTexture(texture: Texture, spec: BuildingTextureSpec) {
+// texture spec を Three.js Texture に反映する。
+function configureTexture(texture: Texture, spec: BoxTextureSpec) {
   texture.colorSpace = SRGBColorSpace
   texture.wrapS = texture.wrapT = getTextureWrapping(spec.wrap)
 
@@ -226,12 +434,14 @@ function configureTexture(texture: Texture, spec: BuildingTextureSpec) {
   texture.needsUpdate = true
 }
 
-function getTextureWrapping(wrap: BuildingTextureSpec['wrap']) {
+// 独自の wrap 文字列を Three.js の wrapping 定数に変換する。
+function getTextureWrapping(wrap: BoxTextureSpec['wrap']) {
   if (wrap === 'clamp') return ClampToEdgeWrapping
   if (wrap === 'mirror') return MirroredRepeatWrapping
   return RepeatWrapping
 }
 
+// 全頂点色を白にした共有 unit box geometry を作る。
 function createUnitBoxGeometry() {
   const geometry = new BoxGeometry(1, 1, 1)
   const colorValues = new Float32Array(geometry.attributes.position.count * 3).fill(1)
@@ -239,6 +449,7 @@ function createUnitBoxGeometry() {
   return geometry
 }
 
+// ColorRepresentation または RGB 配列を Three.js Color に設定する。
 function setInstanceColor(target: Color, color: BoxPartColor) {
   if (Array.isArray(color)) {
     target.setRGB(color[0], color[1], color[2])
@@ -248,8 +459,9 @@ function setInstanceColor(target: Color, color: BoxPartColor) {
   target.set(color)
 }
 
-function groupByMaterial(parts: BoxPart[]): [string, BoxPart[]][] {
-  const groups = new Map<string, BoxPart[]>()
+// BoxInstance 配列を materialKey ごとにまとめる。
+function groupByMaterial(parts: BoxInstance[]): [string, BoxInstance[]][] {
+  const groups = new Map<string, BoxInstance[]>()
 
   for (const part of parts) {
     const group = groups.get(part.materialKey)

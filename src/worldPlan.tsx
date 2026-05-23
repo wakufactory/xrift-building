@@ -133,12 +133,16 @@ export function Buildings() {
   return (
     <>
       <BuildingWorld
+        id="floor-1"
+        name="1F"
         plan={plan1}
         materials={worldBuildingMaterials}
         position={[0,0,0]}
         enableProfileLog={true}
       />
       <BuildingWorld
+        id="floor-2"
+        name="2F"
         plan={plan2}
         materials={worldBuildingMaterials}
         position={[0,5.5 ,0]}

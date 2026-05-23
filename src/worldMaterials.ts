@@ -1,4 +1,4 @@
-import type { BuildingMaterialCatalog } from './building/materials'
+import type { BoxMaterialCatalog } from './building/materials'
 
 export const worldBuildingMaterials = {
   'floor:warm-wood': {
@@ -50,4 +50,9 @@ export const worldBuildingMaterials = {
     roughness: 0.88,
     metalness: 0,
   },
-} satisfies BuildingMaterialCatalog
+  'furniture:neutral': {
+    color: '#a0a0a0',
+    roughness: 0.72,
+    metalness: 0,
+  },
+} satisfies BoxMaterialCatalog

@@ -1,32 +1,36 @@
 import { useEffect, useMemo } from 'react'
 import { compileBuildingPlan } from './compilePlan'
 import { BuildingColliders } from './BuildingColliders'
-import { InstancedBoxLayer } from './InstancedBoxLayer'
+import { BoxLayer } from './InstancedBoxLayer'
 import type { BuildingMaterialCatalog } from './materials'
-import type { BoxPart, BuildingPlan } from './types'
+import type { BoxInstanceSource, BoxPart, BuildingPlan } from './types'
 
+// Building コンポーネントへ渡す plan、material、ログ設定を表す。
 export type BuildingProps = {
   plan: BuildingPlan
   materials: BuildingMaterialCatalog
+  source?: BoxInstanceSource
   enableProfileLog?: boolean
 }
 
-export function Building({ plan, materials, enableProfileLog = true }: BuildingProps) {
+// BuildingPlan を BoxPart にコンパイルし、描画と collider に分配する。
+export function Building({ plan, materials, source, enableProfileLog = true }: BuildingProps) {
   const parts = useMemo(() => compileBuildingPlan(plan), [plan])
 
   useEffect(() => {
     if (!enableProfileLog) return
-    console.log('[building profile]', createBuildingProfile(parts))
-  }, [enableProfileLog, parts])
+    console.log('[building profile]', source, createBuildingProfile(parts))
+  }, [enableProfileLog, parts, source])
 
   return (
     <>
-      <InstancedBoxLayer parts={parts} materials={materials} />
+      <BoxLayer parts={parts} materials={materials} source={source} />
       <BuildingColliders parts={parts} />
     </>
   )
 }
 
+// コンパイル済み box 群の描画数・collider 数・分類数を集計する。
 function createBuildingProfile(parts: BoxPart[]) {
   const byMaterial = countBy(parts, (part) => part.materialKey)
   const byKind = countBy(parts, (part) => part.kind)
@@ -43,6 +47,7 @@ function createBuildingProfile(parts: BoxPart[]) {
   }
 }
 
+// 指定した key で BoxPart 配列を集計する。
 function countBy(parts: BoxPart[], getKey: (part: BoxPart) => string) {
   const counts = new Map<string, number>()
 

@@ -1,25 +1,45 @@
+import { useId, useMemo } from 'react'
 import { Building } from './Building'
 import type { BuildingMaterialCatalog } from './materials'
-import type { BuildingPlan, Vec3 } from './types'
+import type { BoxInstanceSource, BuildingPlan, Vec3 } from './types'
 
+// BuildingWorld の配置、識別子、plan、material を表す。
 export type BuildingWorldProps = {
+  id?: string
+  name?: string
   plan: BuildingPlan
   materials: BuildingMaterialCatalog
   position?: Vec3
   scale?: number
+  source?: BoxInstanceSource
   enableProfileLog?: boolean
 }
 
+// Building を配置 group で包み、source 情報を付けて描画する。
 export function BuildingWorld({
+  id,
+  name,
   plan,
   materials,
   position = [0, 0, 0],
   scale = 1,
+  source,
   enableProfileLog = true,
 }: BuildingWorldProps) {
+  const autoSourceId = useId()
+  const buildingSource = useMemo<BoxInstanceSource>(
+    () => source ?? { kind: 'buildingWorld', id: id ?? autoSourceId, label: name },
+    [autoSourceId, id, name, source],
+  )
+
   return (
-    <group position={position} scale={scale}>
-      <Building plan={plan} materials={materials} enableProfileLog={enableProfileLog} />
+    <group position={position} scale={scale} name={name ?? id} userData={{ boxSource: buildingSource }}>
+      <Building
+        plan={plan}
+        materials={materials}
+        source={buildingSource}
+        enableProfileLog={enableProfileLog}
+      />
     </group>
   )
 }
