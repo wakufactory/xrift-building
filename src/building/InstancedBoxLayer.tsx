@@ -6,11 +6,12 @@ import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute,
 import type { BoxInstance, BoxInstanceSource, BoxPartColor } from './types'
 import { missingBoxMaterial, type BoxMaterialCatalog, type BoxMaterialParameters, type BoxTextureSpec } from './materials'
 
-// BoxLayer に渡す box 配列、material catalog、生成元情報を表す。
+// BoxLayer に渡す box 配列、material catalog、識別情報を表す。
 export type BoxLayerProps = {
+  id?: string
+  label?: string
   parts: BoxInstance[]
   materials: BoxMaterialCatalog
-  source?: BoxInstanceSource
 }
 
 // 既存の InstancedBoxLayer API と互換にするための props alias。
@@ -66,20 +67,17 @@ export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
   )
 }
 
-// box instance 配列を描画する。Provider 配下では登録だけを行う。
-export function BoxLayer({ parts, materials, source: explicitSource }: BoxLayerProps) {
+// box instance 配列を描画する。Provider 配下では kind=boxLayer として登録だけを行う。
+export function BoxLayer({ id, label, parts, materials }: BoxLayerProps) {
   const batchContext = useContext(BoxBatchContext)
-  const sourceId = useId()
-  const explicitSourceKind = explicitSource?.kind
-  const explicitSourceId = explicitSource?.id
-  const explicitSourceLabel = explicitSource?.label
+  const autoId = useId()
   const source = useMemo(
     () => ({
-      kind: explicitSourceKind ?? 'boxLayer',
-      id: explicitSourceId ?? sourceId,
-      label: explicitSourceLabel,
+      kind: 'boxLayer' as const,
+      id: id ?? autoId,
+      label,
     }),
-    [explicitSourceId, explicitSourceKind, explicitSourceLabel, sourceId],
+    [autoId, id, label],
   )
   const groupRef = useRef<Group>(null)
   const unregisterRef = useRef<(() => void) | null>(null)
@@ -90,7 +88,7 @@ export function BoxLayer({ parts, materials, source: explicitSource }: BoxLayerP
     groupRef.current.updateWorldMatrix(true, false)
     const matrixWorld = groupRef.current.matrixWorld.clone()
     const entry = {
-      id: sourceId,
+      id: autoId,
       parts,
       materials,
       source,
@@ -101,7 +99,7 @@ export function BoxLayer({ parts, materials, source: explicitSource }: BoxLayerP
     unregisterRef.current?.()
     unregisterRef.current = batchContext.register(entry)
     entryRef.current = entry
-  }, [batchContext, materials, parts, source, sourceId])
+  }, [autoId, batchContext, materials, parts, source])
 
   useLayoutEffect(() => {
     updateRegistration()

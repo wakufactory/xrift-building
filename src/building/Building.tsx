@@ -16,6 +16,13 @@ export type BuildingProps = {
 // BuildingPlan を BoxPart にコンパイルし、描画と collider に分配する。
 export function Building({ plan, materials, source, enableProfileLog = true }: BuildingProps) {
   const parts = useMemo(() => compileBuildingPlan(plan), [plan])
+  const sourcedParts = useMemo(() => {
+    if (!source) return parts
+    return parts.map((part) => ({
+      ...part,
+      source: part.source ?? source,
+    }))
+  }, [parts, source])
 
   useEffect(() => {
     if (!enableProfileLog) return
@@ -24,7 +31,7 @@ export function Building({ plan, materials, source, enableProfileLog = true }: B
 
   return (
     <>
-      <BoxLayer parts={parts} materials={materials} source={source} />
+      <BoxLayer parts={sourcedParts} materials={materials} />
       <BuildingColliders parts={parts} />
     </>
   )

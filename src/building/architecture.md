@@ -71,6 +71,7 @@ xrift-building-world/
     building/
       Building.tsx
       BuildingWorld.tsx
+      RoomObject.tsx
       BuildingColliders.tsx
       InstancedBoxLayer.tsx
       compilePlan.ts
@@ -195,6 +196,9 @@ opening の `offset` は壁ローカル座標です。
   - 返す `rotation` は object の local `+Z` が部屋内側を向く向きです。
 - `getRoomFloorFrame()` / `getRoomWallFrame()`
   - 配置可能範囲、壁の接線、室内向き法線など、より低レベルな frame 情報を返します。
+- `RoomObject` / `WallObject`
+  - children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
+  - `RoomObject.position` は部屋中心からの床ローカル `[x, z]`、`WallObject.position` は壁ローカル offset です。
 
 ### `BoxInstance` と `BoxPart`
 
@@ -280,9 +284,9 @@ opening の `offset` は壁ローカル座標です。
 
 `BoxLayer` は `visible !== false` の `BoxInstance` だけを対象にし、`materialKey` ごとにグループ化して `InstancedMesh` を作ります。`InstancedBoxLayer` は互換用 alias です。
 
-通常は `BoxLayer` ごとに描画されます。上位に `BoxBatchProvider` がある場合、配下の `BoxLayer` は mesh を直接作らず、`BoxInstance[]`、material catalog、`source`、親 `group` の world transform を provider に登録します。`BoxBatchProvider` は登録された box を world-space に変換してから統合し、material key ごとに 1 つの `InstancedMesh` を作ります。登録内容は `parts`, `materials`, `source`, `matrixWorld` が変わった時だけ更新されます。
+通常は `BoxLayer` ごとに描画されます。上位に `BoxBatchProvider` がある場合、配下の `BoxLayer` は mesh を直接作らず、`BoxInstance[]`、material catalog、`id` / `label` から作った `source`、親 `group` の world transform を provider に登録します。`BoxBatchProvider` は登録された box を world-space に変換してから統合し、material key ごとに 1 つの `InstancedMesh` を作ります。登録内容は `parts`, `materials`, `source`, `matrixWorld` が変わった時だけ更新されます。
 
-`BuildingWorld` は `source.kind = 'buildingWorld'` を `Building` と `BoxLayer` に渡します。直接置いた `BoxLayer` は `source.kind = 'boxLayer'` です。統合後の `InstancedMesh.userData.boxInstances[instanceId]` から、元の `BoxInstance.id`、`materialKey`、`source` を参照できます。
+`BuildingWorld` は `source.kind = 'buildingWorld'` を `Building` に渡し、`Building` は各 `BoxPart.source` にそれを付与してから `BoxLayer` へ渡します。直接置いた `BoxLayer` は `kind` が常に `boxLayer` で、`id` / `label` props だけを受け取ります。統合後の `InstancedMesh.userData.boxInstances[instanceId]` から、元の `BoxInstance.id`、`materialKey`、`source` を参照できます。
 
 material catalog に texture がある場合は `useXRift().baseUrl` と `texture.map` を結合して `useTexture()` で読み込みます。`texture.map` が `http:`, `https:`, `data:`, `blob:` から始まる場合はそのまま使います。
 
@@ -300,6 +304,8 @@ material 自体の `color` は白にし、`vertexColors: true` と `instanceColo
 `BoxColliders` は `RigidBody type="fixed"` の中に `CuboidCollider` を並べます。対象は `collider !== false` の `BoxInstance` だけです。`BuildingColliders` は互換用 alias です。`BoxBatchProvider` は描画だけを統合し、collider は統合しません。
 
 `CuboidCollider.args` は Rapier の half extents なので、`part.size / 2` を渡しています。`position` と `rotation` は `BoxInstance` / `BoxPart` からそのまま渡します。
+
+親 `group` の `position` / `rotation` が reactive に変わる場合、Three.js の親 transform は Rapier の fixed body に自動反映されないことがあります。そのため `BoxColliders` は自身の wrapper group の `matrixWorld` を監視し、変化した時だけ `RigidBody.setTranslation()` / `setRotation()` で physics body を同期します。
 
 ## プロファイル出力
 
@@ -323,21 +329,8 @@ console.log('[building profile]', source, {
 `src/index.tsx` は以下を export します。
 
 - `World`, `WorldProps`
-- `Building`, `BuildingProps`
-- `BuildingWorld`, `BuildingWorldProps`
-- `BoxBatchProvider`, `BoxBatchProviderProps`
-- `BoxLayer`, `BoxLayerProps`
-- `InstancedBoxLayer`, `InstancedBoxLayerProps`
-- `BoxColliders`, `BoxCollidersProps`
-- `BuildingColliders`, `BuildingCollidersProps`
-- `getFloorPlacement`, `getWallPlacement`, `getRoomFloorFrame`, `getRoomWallFrame`
-- `PlacementTransform`, `FloorPlacementInput`, `WallPlacementInput`, `RoomFloorFrame`, `RoomWallFrame`
-- `worldBuildingMaterials`
-- `missingBoxMaterial`
-- `missingBuildingMaterial`
-- `BoxMaterialCatalog`, `BoxMaterialParameters`, `BoxTextureSpec`, `BoxTextureWrap`
-- `BuildingMaterialCatalog`, `BuildingMaterialParameters`, `BuildingTextureSpec`, `BuildingTextureWrap`
-- `BuildingPlan`, `RoomSpec`, `OpeningSpec`, `BoxInstance`, `BoxInstanceSource`, `BoxInstanceSourceKind`, `BoxPart` などの型
+
+building API は package root からは export しません。`World.tsx` 内や補完用 world で使う場合は、必要な component / utility を `src/building/...` から直接 import します。
 
 現状、`plan1`, `plan2`, `Buildings()` は `src/worldPlan.tsx` からは export されていますが、package の `src/index.tsx` からは export されていません。
 

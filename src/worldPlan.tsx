@@ -1,6 +1,8 @@
-import type { BuildingPlan } from './building/types'
+import type { BuildingPlan,BoxInstance } from './building/types'
 import { BuildingWorld } from './building/BuildingWorld'
 import { worldBuildingMaterials } from './worldMaterials'
+import { BoxBatchProvider, BoxLayer } from './building/InstancedBoxLayer'
+import { BoxColliders } from './building/BuildingColliders'
 
 /// north -z east +x south +z west x
 
@@ -9,6 +11,11 @@ export const plan1: BuildingPlan = {
   floorHeight: 5.5,
   wallThickness: 0.22,
   slabThickness: 0.12,
+  exteriorGround: {
+    margin: 5,
+    thickness: 0.2,
+    materialKey: 'ground:outdoor',
+  },
   pillar: {
     thickness: 0.25,
   },
@@ -107,31 +114,55 @@ export const plan2: BuildingPlan = {
   rooms: [
     {
       id: '2F-robby',
-      position: [0, 8],
-      size: [8, 10],
+      position: [0, 7],
+      size: [8, 8],
       surfaces: {
-        floor: { hidden:true  },
+        floor: { hidden:true, noCollider:true },
         wall: { materialKey: 'wall:gallery-white' },
         walls: {
           north: { color: '#208020' },
         },
       },
       doors: [
-        { side: 'east', offset: -2.8, width: 2.1, height: 2.25 },
+        { side: 'east', offset: -2.5, width: 2.1, height: 2.25 },
       ],
       windows: [
         { side: 'north', offset :0, width:2.4, bottom:1, height:2},
         { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.1 },
-        { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1.1 },
+        { side: 'west', offset: -2., width: 1.5, bottom: 1, height: 1.1 },
         { side: 'south', offset: -0, width: 5, bottom: 1.1, height: 2 },
       ],
     },
   ]
 }
 
+
+const exteriorBoxes: BoxInstance[] = [
+  {
+    id: 'sample-fixed-post',
+    position: [5, 1.5, 11],
+    size: [1, 3, 1],
+    materialKey: 'furniture:neutral',
+  },
+  {
+    id: 'sample-low-block',
+    position: [5, 0.75, 7],
+    size: [1, 1.5, 1],
+    materialKey: 'furniture:neutral',
+  },
+]
+
 export function Buildings() {
   return (
-    <>
+    <BoxBatchProvider>
+      <group position={[-1, 0, 1]} rotation={[0,Math.PI*0,0]}>
+      <BoxLayer
+        id={'exterior-boxes'}
+        parts={exteriorBoxes}
+        materials={worldBuildingMaterials}
+      />
+      <BoxColliders parts={[exteriorBoxes[0]]} />
+
       <BuildingWorld
         id="floor-1"
         name="1F"
@@ -148,6 +179,7 @@ export function Buildings() {
         position={[0,5.5 ,0]}
         enableProfileLog={true}
       />
-    </>
+      </group>
+    </BoxBatchProvider>
   )
 }
