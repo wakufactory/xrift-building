@@ -51,7 +51,7 @@ export const worldBuildingMaterials = {
     metalness: 0,
   },
   'furniture:neutral': {
-    color: '#a0a0a0',
+    color: '#a8826f',
     roughness: 0.72,
     metalness: 0,
   },
