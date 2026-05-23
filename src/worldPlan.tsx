@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useFrame} from '@react-three/fiber'
 import { Mesh } from 'three'
+import { RigidBody} from '@react-three/rapier'
 import type { BuildingPlan,BoxInstance } from './building/types'
 import { BuildingWorld } from './building/BuildingWorld'
 import { worldBuildingMaterials } from './worldMaterials'
@@ -159,12 +160,12 @@ const TableObject:React.FC = () => {
     },
   ]
   return(
-        <BoxLayer
-          id={'exterior-boxes'}
-          parts={exteriorBoxes}
-          materials={worldBuildingMaterials}
-          collider
-        />
+    <BoxLayer
+      id={'exterior-boxes'}
+      parts={exteriorBoxes}
+      materials={worldBuildingMaterials}
+      collider
+    />
   )
 }
 //回転オブジェクツ
@@ -175,10 +176,10 @@ const Rotateobj:React.FC = ()=>{
     if(poll.current) poll.current.rotation.y += dt * 0.1
   })
   return (
-          <mesh ref={poll} rotation={[0, Math.PI / 4, 0]} position={[0, 1.5, 0]}>
-            <boxGeometry args={[0.5, 3, 0.5]} />
-            <meshStandardMaterial color={'#a020f0'} />
-          </mesh> 
+    <mesh ref={poll} rotation={[0, Math.PI / 4, 0]} position={[1, 1.5, -1]} castShadow>
+      <octahedronGeometry args={[0.8, 0]} />
+      <meshStandardMaterial color={'#a020f0'} />
+    </mesh> 
   )
 }
 
@@ -200,7 +201,7 @@ export function Buildings() {
         enableProfileLog={true}
       >
         //テーブル
-        <RoomObject roomId="1-robby" position={[0,0]}>
+        <RoomObject roomId="1-robby" position={[-2,2]}>
           <TableObject />
         </RoomObject>
         //部屋オブジェクト
@@ -214,6 +215,15 @@ export function Buildings() {
             <meshStandardMaterial color={'#f08080'} />
           </mesh> 
         </WallObject>
+        //ball
+        <RoomObject roomId="1-robby" position={[-0,-1]}>
+          <RigidBody type="dynamic" colliders="ball" restitution={0.5} friction={1}>
+            <mesh position={[0,0.5,0]} castShadow>
+              <sphereGeometry args={[0.5]}/>
+              <meshStandardMaterial color="#4400ff"/>
+            </mesh>
+          </RigidBody>
+        </RoomObject>
       </BuildingWorld>
       //二階
       <BuildingWorld
@@ -245,6 +255,7 @@ export function Buildings() {
         materials={worldBuildingMaterials}
         collider
       />
+
       </group>  
     </BoxBatchProvider>
   )
