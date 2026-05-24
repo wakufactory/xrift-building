@@ -1,6 +1,7 @@
 import { SpawnPoint } from '@xrift/world-components'
 import { RigidBody } from '@react-three/rapier'
 import { Buildings } from './worldPlan.tsx'
+import { PlayerShadowLight } from './components/PlayerShadowLight'
 
 export interface WorldProps {
   position?: [number, number, number]
@@ -25,19 +26,7 @@ export const World: React.FC<WorldProps> = () => {
 
       <ambientLight intensity={0.45} />
       <hemisphereLight args={['#f4efe3', '#526069', 1.1]} />
-      <directionalLight
-        position={[8, 24, 16]}
-        intensity={2.2}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-        shadow-camera-near={0.1}
-        shadow-camera-far={60}
-      />
+      <PlayerShadowLight />
 
       {Buildings()}
     </>
