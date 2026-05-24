@@ -26,7 +26,7 @@ export const World: React.FC<WorldProps> = () => {
       <ambientLight intensity={0.45} />
       <hemisphereLight args={['#f4efe3', '#526069', 1.1]} />
       <directionalLight
-        position={[4, 12, 8]}
+        position={[8, 24, 16]}
         intensity={2.2}
         castShadow
         shadow-mapSize-width={1024}

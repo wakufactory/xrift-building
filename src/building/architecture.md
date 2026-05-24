@@ -100,9 +100,13 @@ xrift-building-world/
 - `pillar?: { thickness?: number }`
   - 部屋の四隅に置く柱の X/Z 方向の太さです。
   - 未指定時は `wallThickness * 1.4` です。
+- `roof?: RoofSpec | false`
+  - room 形状に合わせて分割生成する平面屋根です。
+  - `false` または未指定時は生成しません。
+  - `overhang`, `thickness`, `heightOffset`, `materialKey`, `color`, `hidden`, `noCollider` を指定できます。
 - `materialKeys`
   - デフォルト material key 群です。
-  - `room.floor`, `room.wall`, `room.ceiling`, `exteriorGround`, `pillar` を持ちます。
+  - `room.floor`, `room.wall`, `room.ceiling`, `exteriorGround`, `pillar`, `roof` を持ちます。`roof` は任意です。
 - `exteriorGround?: ExteriorGroundSpec | false`
   - 部屋全体の外側に生成する地面です。
   - `false` で無効化します。
@@ -110,7 +114,7 @@ xrift-building-world/
 - `rooms: RoomSpec[]`
   - 部屋の配列です。
 
-`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, opening の `offset`, `width`, `height`, `bottom` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
+`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `roof.overhang`, `roof.thickness`, `roof.heightOffset`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, opening の `offset`, `width`, `height`, `bottom` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
 
 ### `RoomSpec`
 
@@ -220,7 +224,7 @@ opening の `offset` は壁ローカル座標です。
 
 `source` は統合描画後も元の `BuildingWorld` / `BoxLayer` を追跡するための情報です。`source.kind` は `buildingWorld` または `boxLayer` です。
 
-`BoxPart` は建物コンパイル後の中間表現で、`BoxInstance` に `kind` を足した型です。`kind` は `floor`, `exteriorGround`, `wall`, `ceiling`, `pillar`, `trim`, `colliderOnly` を取ります。
+`BoxPart` は建物コンパイル後の中間表現で、`BoxInstance` に `kind` を足した型です。`kind` は `floor`, `exteriorGround`, `wall`, `ceiling`, `roof`, `pillar`, `trim`, `colliderOnly` を取ります。
 
 現状の compiler は回転なしの box を主に生成しますが、描画と collider の経路は `rotation` を受け取れる形になっています。
 
@@ -266,7 +270,17 @@ opening の `offset` は壁ローカル座標です。
 
 残った矩形は `compileWall()` で world-space の box に戻されます。north/south 壁は X 方向に長く、east/west 壁は Z 方向に長い box になります。
 
-### 6. 柱
+### 6. 屋根
+
+`compileRoof()` は `plan.roof` が指定された場合に、room 矩形の合成範囲を覆う `roof` box 群を生成します。最大外接矩形ではなく、room 形状に沿った非重複の矩形群へ分割します。
+
+- `overhang` のデフォルトは `0` です。
+- `thickness` のデフォルトは `plan.slabThickness` です。
+- `heightOffset` のデフォルトは `0` です。正の値で上、負の値で下に移動します。
+- Y 位置は既存の天井 slab の上面に載るよう、`plan.floorHeight + heightOffset + plan.slabThickness + thickness / 2` です。
+- material key は `roof.materialKey ?? plan.materialKeys.roof ?? plan.materialKeys.room.ceiling` です。
+
+### 7. 柱
 
 `compileRoomTrim()` は部屋の 4 隅に `pillar` box を生成します。
 
@@ -276,7 +290,7 @@ opening の `offset` は壁ローカル座標です。
 
 隣接 room から完全一致する柱が生成された場合は、最後の dedupe で除去されます。
 
-### 7. 重複除去
+### 8. 重複除去
 
 `dedupeExactBoxParts(parts)` は完全一致する `BoxPart` だけを除去します。
 

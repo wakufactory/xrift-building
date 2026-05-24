@@ -40,6 +40,11 @@ export const worldBuildingMaterials = {
     roughness: 0.86,
     metalness: 0,
   },
+  'roof:flat-concrete': {
+    color: '#5f686c',
+    roughness: 0.88,
+    metalness: 0,
+  },
   'trim:dark-metal': {
     color: '#2f3538',
     roughness: 0.45,

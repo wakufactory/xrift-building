@@ -22,6 +22,7 @@ export type BuildingPlan = {
   wallThickness: number
   slabThickness: number
   pillar?: PillarSpec
+  roof?: RoofSpec | false
   materialKeys: BuildingMaterialKeys
   exteriorGround?: ExteriorGroundSpec | false
   rooms: RoomSpec[]
@@ -32,6 +33,7 @@ export type BuildingMaterialKeys = {
   room: RoomMaterials
   exteriorGround: string
   pillar: string
+  roof?: string
 }
 
 // 建物外側に置く地面 box の設定を表す。
@@ -44,6 +46,13 @@ export type ExteriorGroundSpec = {
 // 部屋角に置く柱の設定を表す。
 export type PillarSpec = {
   thickness?: number
+}
+
+// room 形状に沿って分割生成する平面屋根の設定を表す。
+export type RoofSpec = SurfaceSpec & {
+  overhang?: number
+  thickness?: number
+  heightOffset?: number
 }
 
 // 1 部屋分の形状、面設定、開口を表す。
@@ -97,6 +106,7 @@ export type BoxPartKind =
   | 'exteriorGround'
   | 'wall'
   | 'ceiling'
+  | 'roof'
   | 'pillar'
   | 'trim'
   | 'colliderOnly'

@@ -19,6 +19,12 @@ export const myPlan: BuildingPlan = {
   pillar: {
     thickness: 0.25,
   },
+  roof: {
+    overhang: 0.35,
+    thickness: 0.16,
+    heightOffset: 0,
+    materialKey: 'roof:flat-concrete',
+  },
   materialKeys: {
     room: {
       floor: 'floor:warm-wood',
@@ -27,6 +33,7 @@ export const myPlan: BuildingPlan = {
     },
     exteriorGround: 'ground:outdoor',
     pillar: 'pillar:concrete',
+    roof: 'roof:flat-concrete',
   },
   rooms: [
     {
@@ -43,6 +50,25 @@ export const myPlan: BuildingPlan = {
   ],
 }
 ```
+
+## 屋根
+
+`roof` を指定すると、plan 内の room 形状に合わせて平面屋根を生成します。L 字や張り出しのある平面では、最大外接矩形ではなく部屋矩形の合成範囲だけを非重複の矩形 roof に分割します。
+
+```ts
+roof: {
+  overhang: 0.35,
+  thickness: 0.16,
+  heightOffset: 0,
+  materialKey: 'roof:flat-concrete',
+}
+```
+
+- `overhang` は各 room 矩形から外側へ張り出す量です。
+- `thickness` は屋根 slab の厚みです。省略時は `slabThickness` を使います。
+- `heightOffset` は `floorHeight` を基準に屋根位置を上下へずらす量です。正の値で上、負の値で下に移動します。
+- `materialKey` を省略すると `materialKeys.roof`、それもなければ `materialKeys.room.ceiling` を使います。
+- `roof: false` または未指定なら屋根は生成しません。
 
 この plan を表示するには `BuildingWorld` に渡します。
 

@@ -8,6 +8,13 @@ type WallSegment = {
   top: number
 }
 
+type Rect2D = {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
 // ドア・窓の省略値をまとめる。
 const OPENING_DEFAULTS = {
   doorBottom: 0,
@@ -29,6 +36,7 @@ export function compileBuildingPlan(plan: BuildingPlan): BoxPart[] {
   return dedupeExactBoxParts([
     ...compileExteriorGround(worldPlan),
     ...worldPlan.rooms.flatMap((room) => compileRoom(worldPlan, room)),
+    ...compileRoof(worldPlan),
   ])
 }
 
@@ -49,6 +57,12 @@ function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
     pillar: plan.pillar ? {
       ...plan.pillar,
       thickness: scaleOptional(plan.pillar.thickness, unit),
+    } : undefined,
+    roof: plan.roof === false ? false : plan.roof ? {
+      ...plan.roof,
+      overhang: scaleOptional(plan.roof.overhang, unit),
+      thickness: scaleOptional(plan.roof.thickness, unit),
+      heightOffset: scaleOptional(plan.roof.heightOffset, unit),
     } : undefined,
     exteriorGround: plan.exteriorGround === false ? false : plan.exteriorGround ? {
       ...plan.exteriorGround,
@@ -138,6 +152,109 @@ function getRoomBounds(rooms: RoomSpec[]) {
       maxZ: Number.NEGATIVE_INFINITY,
     },
   )
+}
+
+// 部屋群の平面形状に沿って、非重複の平面屋根 BoxPart を生成する。
+function compileRoof(plan: BuildingPlan): BoxPart[] {
+  if (plan.roof === false || !plan.roof || plan.rooms.length === 0) {
+    return []
+  }
+
+  const roof = plan.roof
+  const overhang = roof.overhang ?? 0
+  const thickness = roof.thickness ?? plan.slabThickness
+  const heightOffset = roof.heightOffset ?? 0
+  const y = plan.floorHeight + heightOffset + plan.slabThickness + thickness / 2
+  const rects = splitCoveredRects(plan.rooms.map((room) => {
+    const [x, z] = room.position
+    const [width, depth] = room.size
+    return {
+      minX: x - width / 2 - overhang,
+      maxX: x + width / 2 + overhang,
+      minZ: z - depth / 2 - overhang,
+      maxZ: z + depth / 2 + overhang,
+    }
+  }))
+
+  return rects.map((rect, index) => (
+    applySurfaceSpec({
+      id: `roof:flat:${index}`,
+      kind: 'roof',
+      // 同じ高さで重なる roof box を作らないため、room 矩形の union を
+      // 小さな非重複矩形に分けてから box 化する。
+      position: [(rect.minX + rect.maxX) / 2, y, (rect.minZ + rect.maxZ) / 2],
+      size: [rect.maxX - rect.minX, thickness, rect.maxZ - rect.minZ],
+      materialKey: roof.materialKey ?? plan.materialKeys.roof ?? plan.materialKeys.room.ceiling,
+      color: roof.color,
+      collider: true,
+    }, roof)
+  ))
+}
+
+// 入力矩形群の union を、重ならない矩形群へ分割する。
+function splitCoveredRects(rects: Rect2D[]): Rect2D[] {
+  const xEdges = sortedUnique(rects.flatMap((rect) => [rect.minX, rect.maxX]))
+  const zEdges = sortedUnique(rects.flatMap((rect) => [rect.minZ, rect.maxZ]))
+  const coveredRows: Rect2D[] = []
+
+  for (let zIndex = 0; zIndex < zEdges.length - 1; zIndex += 1) {
+    const minZ = zEdges[zIndex]
+    const maxZ = zEdges[zIndex + 1]
+    let currentStartX: number | undefined
+
+    for (let xIndex = 0; xIndex < xEdges.length - 1; xIndex += 1) {
+      const minX = xEdges[xIndex]
+      const maxX = xEdges[xIndex + 1]
+      const covered = rects.some((rect) => rectCoversCell(rect, minX, maxX, minZ, maxZ))
+
+      if (covered && currentStartX === undefined) {
+        currentStartX = minX
+      }
+
+      if ((!covered || xIndex === xEdges.length - 2) && currentStartX !== undefined) {
+        coveredRows.push({
+          minX: currentStartX,
+          maxX: covered ? maxX : minX,
+          minZ,
+          maxZ,
+        })
+        currentStartX = undefined
+      }
+    }
+  }
+
+  return mergeVerticalRects(coveredRows)
+}
+
+function rectCoversCell(rect: Rect2D, minX: number, maxX: number, minZ: number, maxZ: number): boolean {
+  return rect.minX <= minX + EPSILON
+    && rect.maxX >= maxX - EPSILON
+    && rect.minZ <= minZ + EPSILON
+    && rect.maxZ >= maxZ - EPSILON
+}
+
+function sortedUnique(values: number[]): number[] {
+  return [...new Set(values.map((value) => Number(value.toFixed(4))))].sort((a, b) => a - b)
+}
+
+function mergeVerticalRects(rects: Rect2D[]): Rect2D[] {
+  const merged: Rect2D[] = []
+
+  for (const rect of rects) {
+    const last = merged[merged.length - 1]
+    if (
+      last
+      && nearlyEqual(last.minX, rect.minX)
+      && nearlyEqual(last.maxX, rect.maxX)
+      && nearlyEqual(last.maxZ, rect.minZ)
+    ) {
+      last.maxZ = rect.maxZ
+    } else {
+      merged.push({ ...rect })
+    }
+  }
+
+  return merged
 }
 
 // 1 部屋から床、天井、壁、柱の BoxPart を生成する。

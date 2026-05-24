@@ -24,6 +24,12 @@ export const plan1: BuildingPlan = {
   pillar: {
     thickness: 0.25,
   },
+  roof: {
+    overhang: 0.5,
+    thickness: 0.16,
+    heightOffset: -0.1,
+    materialKey: 'roof:flat-concrete',
+  },
   materialKeys: {
     room: {
       floor: 'floor:warm-wood',
@@ -32,6 +38,7 @@ export const plan1: BuildingPlan = {
     },
     exteriorGround: 'ground:outdoor',
     pillar: 'pillar:concrete',
+    roof: 'roof:flat-concrete',
   },
   rooms: [
     {
@@ -116,6 +123,12 @@ export const plan2: BuildingPlan = {
     },
     exteriorGround: 'ground:outdoor',
     pillar: 'pillar:concrete',
+  },
+  roof: {
+    overhang: 0.5,
+    thickness: 0.16,
+    heightOffset: -0.1,
+    materialKey: 'roof:flat-concrete',
   },
   rooms: [
     {
