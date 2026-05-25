@@ -46,6 +46,9 @@ export const myPlan: BuildingPlan = {
       windows: [
         { side: 'north', offset: -1.5, width: 1.2 },
       ],
+      ceilingOpenings: [
+        { position: [0, 1], size: [2, 2] },
+      ],
     },
   ],
 }
@@ -121,7 +124,7 @@ export const plan: BuildingPlan = {
 }
 ```
 
-この例では、plan 上の `6` は実座標では `3` になります。`room.position`, `room.size`, `door/window` の `offset`, `width`, `height`, `bottom`、床高、壁厚、床 slab、柱、外部地面の寸法がまとめてスケールされます。
+この例では、plan 上の `6` は実座標では `3` になります。`room.position`, `room.size`, `door/window` の `offset`, `width`, `height`, `bottom`、床/天井/屋根開口の `position`, `size`、床高、壁厚、床 slab、柱、外部地面の寸法がまとめてスケールされます。
 
 ## 部屋を書く
 
@@ -175,6 +178,24 @@ windows: [
 | window | `1.05` | `1.05` |
 
 `width` と `offset` は必須です。開口が壁の外にはみ出す場合、壁と重なる範囲だけが引かれます。
+
+## 床・天井・屋根の開口
+
+床、天井、屋根にも room 単位で矩形開口を指定できます。`position` は部屋中心からの `[x, z]`、`size` は `[width, depth]` です。
+
+```ts
+ceilingOpenings: [
+  { position: [0, 1], size: [2, 2] },
+],
+floorOpenings: [
+  { position: [0, 1], size: [2, 2] },
+],
+roofOpenings: [
+  { position: [0, 1], size: [2, 2] },
+],
+```
+
+床と天井の開口が部屋の外にはみ出す場合、部屋と重なる範囲だけが引かれます。屋根の開口は room 基準の位置で roof だけから引かれ、`overhang` 部分も含む屋根形状との重なりだけが抜かれます。床、天井、屋根の開口は互いに独立しており、壁の `doors` / `windows` には影響しません。
 
 ## 面の色と material
 

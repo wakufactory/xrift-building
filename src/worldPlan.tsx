@@ -2,11 +2,13 @@ import { useRef } from 'react'
 import { useFrame} from '@react-three/fiber'
 import { Mesh } from 'three'
 import { RigidBody} from '@react-three/rapier'
-import type { BuildingPlan,BoxInstance } from './building/types'
+import type { BuildingPlan,BoxInstance,Vec3 } from './building/types'
 import { BuildingWorld } from './building/BuildingWorld'
 import { worldBuildingMaterials } from './worldMaterials'
 import { BoxBatchProvider, BoxLayer } from './building/InstancedBoxLayer'
 import { RoomObject, WallObject } from './building/RoomObject'
+import { Vec2,BoxPartColor} from './building/types.ts'
+import { Text } from '@react-three/drei'
 
 /// north -z east +x south +z west x
 
@@ -24,12 +26,12 @@ export const plan1: BuildingPlan = {
   pillar: {
     thickness: 0.25,
   },
-  roof: {
-    overhang: 0.5,
-    thickness: 0.16,
-    heightOffset: -0.1,
-    materialKey: 'roof:flat-concrete',
-  },
+  //roof: {
+  //  overhang: 0.5,
+  //  thickness: 0.16,
+  //  heightOffset: -0.1,
+  //  materialKey: 'roof:flat-concrete',
+  //},
   materialKeys: {
     room: {
       floor: 'floor:warm-wood',
@@ -60,6 +62,9 @@ export const plan1: BuildingPlan = {
         { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.1 },
         { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1.1 },
         { side: 'south', offset: -0, width: 5, bottom: 1.1, height: 2 },
+      ],
+      ceilingOpenings: [
+        { position: [-2.5, -3], size: [2, 2] },
       ],
     },
     {
@@ -127,7 +132,7 @@ export const plan2: BuildingPlan = {
   roof: {
     overhang: 0.5,
     thickness: 0.16,
-    heightOffset: -0.1,
+    heightOffset: -0.,
     materialKey: 'roof:flat-concrete',
   },
   rooms: [
@@ -136,7 +141,7 @@ export const plan2: BuildingPlan = {
       position: [0, 7],
       size: [8, 8],
       surfaces: {
-        floor: { hidden:true, noCollider:true },
+        floor: { hidden:false, noCollider:false },
         wall: { materialKey: 'wall:gallery-white' },
         walls: {
           north: { color: '#208020' },
@@ -151,38 +156,55 @@ export const plan2: BuildingPlan = {
         { side: 'west', offset: -2., width: 1.5, bottom: 1, height: 1.1 },
         { side: 'south', offset: -0, width: 5, bottom: 1.1, height: 2 },
       ],
+      floorOpenings: [
+        { position: [-2.5, -2], size: [2, 2] },
+      ],
+       ceilingOpenings: [
+        { position: [0, 0], size: [2, 2] },
+      ],
+       roofOpenings: [
+        { position: [0, 0], size: [2-0.01, 2-0.01] },
+      ],      
     },
   ]
 }
 
 //テーブル
-const TableObject:React.FC = () => {
-  const exteriorBoxes: BoxInstance[] = [
+const TableObject = ({
+    size = [1,1],
+    color = '#5d4646'
+  } : {
+    size?:Vec2,
+    color?:BoxPartColor
+}) => {
+  const tableBoxes: BoxInstance[] = [
     {
       id: 'table-leg',
       position: [0, 0.5, 0],
       size: [0.2, 1, 0.2],
       materialKey: 'furniture:neutral',
       collider: false,
+      color:color
     },
     {
       id: 'table-f',
       position: [0, 1.0, 0],
-      size: [1.5, 0.05, 1.5],
+      size: [size[0], 0.05, size[1]],
       materialKey: 'furniture:neutral',
+      color:color
     },
   ]
   return(
     <BoxLayer
-      id={'exterior-boxes'}
-      parts={exteriorBoxes}
+      id={'table-boxes'}
+      parts={tableBoxes}
       materials={worldBuildingMaterials}
       collider
     />
   )
 }
-//回転オブジェクツ
-const Rotateobj:React.FC = ()=>{
+//回転オブジェクト
+const Rotateobj = ()=>{
   const poll = useRef<Mesh>(null)
 
   useFrame((_,dt)=>{
@@ -195,14 +217,14 @@ const Rotateobj:React.FC = ()=>{
     </mesh> 
   )
 }
-
-export function Buildings() {
+//全体の組み立て
+export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
 
   return (
     //instanced box領域
     <BoxBatchProvider>
       //家全体 group
-      <group position={[-1, 0, 1]} rotation={[0,Math.PI*0,0]}>
+      <group position={position} rotation={[0,Math.PI*0,0]}>
 
       //一階
       <BuildingWorld
@@ -215,7 +237,7 @@ export function Buildings() {
       >
         //テーブル
         <RoomObject roomId="1-robby" position={[-2,2]}>
-          <TableObject />
+          <TableObject size={[1.5,2]}/>
         </RoomObject>
         //部屋オブジェクト
         <RoomObject roomId="2-gallery" position={[0, 0]} >
@@ -228,7 +250,7 @@ export function Buildings() {
             <meshStandardMaterial color={'#f08080'} />
           </mesh> 
         </WallObject>
-        //ball
+        //動かせるball
         <RoomObject roomId="1-robby" position={[-0,-1]}>
           <RigidBody type="dynamic" colliders="ball" restitution={0.5} friction={1}>
             <mesh position={[0,0.5,0]} castShadow>
@@ -239,6 +261,7 @@ export function Buildings() {
         </RoomObject>
       </BuildingWorld>
       //二階
+      {true &&
       <BuildingWorld
         id="floor-2"
         name="2F"
@@ -248,12 +271,12 @@ export function Buildings() {
         enableProfileLog={true}
       >
         //テーブル
-        <RoomObject roomId="2F-robby" position={[0,-1]}>
-          <TableObject />
+        <RoomObject roomId="2F-robby" position={[2,-2]}>
+          <TableObject size={[1.5,1.5]} color={'#e4c98e'} />
         </RoomObject>
       </BuildingWorld>
-
-      //外階段
+ }
+      //外斜面
       <BoxLayer
         id="slope"
         parts={[
@@ -268,6 +291,15 @@ export function Buildings() {
         materials={worldBuildingMaterials}
         collider
       />
+      <Text
+        position={[5, 1, 15]}
+        fontSize={0.8}
+        color="#161f3f"
+        anchorX="center"
+        anchorY="middle"
+      >
+        SampleHouse
+      </Text>
 
       </group>  
     </BoxBatchProvider>

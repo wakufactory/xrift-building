@@ -63,6 +63,9 @@ export type RoomSpec = {
   surfaces?: RoomSurfaces
   doors?: OpeningSpec[]
   windows?: OpeningSpec[]
+  floorOpenings?: SlabOpeningSpec[]
+  ceilingOpenings?: SlabOpeningSpec[]
+  roofOpenings?: SlabOpeningSpec[]
 }
 
 // 床・壁・天井などの見た目と collider の上書きを表す。
@@ -91,6 +94,12 @@ export type OpeningSpec = {
   width: number
   height?: number
   bottom?: number
+}
+
+// 床・天井・屋根 slab に開ける、部屋中心基準の矩形開口を表す。
+export type SlabOpeningSpec = {
+  position: Vec2
+  size: Vec2
 }
 
 // 部屋の床・壁・天井に使う material key を表す。

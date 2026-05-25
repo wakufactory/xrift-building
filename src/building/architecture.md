@@ -115,7 +115,7 @@ xrift-building-world/
 - `rooms: RoomSpec[]`
   - 部屋の配列です。
 
-`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `roof.overhang`, `roof.thickness`, `roof.heightOffset`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, opening の `offset`, `width`, `height`, `bottom` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
+`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `roof.overhang`, `roof.thickness`, `roof.heightOffset`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, opening の `offset`, `width`, `height`, `bottom`, 床/天井/屋根開口の `position`, `size` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
 
 ### `RoomSpec`
 
@@ -134,6 +134,12 @@ xrift-building-world/
   - ドア開口です。
 - `windows?: OpeningSpec[]`
   - 窓開口です。
+- `floorOpenings?: SlabOpeningSpec[]`
+  - 床 slab に開ける矩形開口です。
+- `ceilingOpenings?: SlabOpeningSpec[]`
+  - 天井 slab に開ける矩形開口です。
+- `roofOpenings?: SlabOpeningSpec[]`
+  - 屋根 slab に開ける矩形開口です。
 
 ### `WallSide` と座標
 
@@ -168,6 +174,17 @@ opening の `offset` は壁ローカル座標です。
 
 - door: `bottom = 0`, `height = 2.15`
 - window: `bottom = 1.05`, `height = 1.05`
+
+### `SlabOpeningSpec`
+
+`SlabOpeningSpec` は床・天井・屋根 slab に開ける矩形です。
+
+- `position: [number, number]`
+  - 部屋中心からの `[x, z]` です。
+- `size: [number, number]`
+  - X 方向の幅と Z 方向の奥行きです。
+
+床と天井の開口が部屋の外にはみ出す場合、部屋と重なる範囲だけが引かれます。屋根開口は room 基準の位置で roof union から差し引かれ、`overhang` 部分も含む屋根形状との重なりだけが抜かれます。床、天井、屋根の開口は互いに独立しており、壁開口には影響しません。
 
 ### `SurfaceSpec`
 
@@ -253,7 +270,7 @@ opening の `offset` は壁ローカル座標です。
 
 床、壁、天井は `plan.materialKeys.room` をデフォルトにし、`room.surfaces` で上書きします。
 
-床 slab は `0..plan.slabThickness`、天井 slab は `plan.floorHeight - plan.slabThickness..plan.floorHeight` に収まります。壁と柱は従来通り `0..plan.floorHeight` に生成します。
+床 slab は `0..plan.slabThickness`、天井 slab は壁との z-fighting を避けるために `0.001` 下げて `plan.floorHeight - plan.slabThickness - 0.001..plan.floorHeight - 0.001` に収まります。`floorOpenings` / `ceilingOpenings` がある場合は、部屋矩形から開口矩形を引いた非重複矩形群に分割して box 化します。壁と柱は従来通り `0..plan.floorHeight` に生成します。
 
 壁は各 side ごとに `compileWall()` へ渡されます。ドア、窓、共有壁の重複除去は、すべて壁ローカルの矩形開口として扱います。
 
@@ -281,6 +298,7 @@ opening の `offset` は壁ローカル座標です。
 - `thickness` のデフォルトは `plan.slabThickness` です。
 - `heightOffset` のデフォルトは `0` です。正の値で上、負の値で下に移動します。
 - Y 位置は `plan.floorHeight + heightOffset` です。`heightOffset = 0` では屋根 slab の中心が建物高さの上端に乗り、厚みの半分が上へはみ出します。
+- 各 room の `roofOpenings` がある場合は、room 中心基準の開口矩形を roof union から引いた非重複矩形群に分割して box 化します。
 - material key は `roof.materialKey ?? plan.materialKeys.roof ?? plan.materialKeys.room.ceiling` です。
 
 ### 7. 柱

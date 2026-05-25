@@ -1,4 +1,4 @@
-import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomSpec, SurfaceSpec, Vec3, WallSide } from './types'
+import type { BoxPart, BoxPartColor, BuildingPlan, OpeningSpec, RoomSpec, SlabOpeningSpec, SurfaceSpec, Vec3, WallSide } from './types'
 
 // 壁ローカル座標上の矩形セグメントを表す。
 type WallSegment = {
@@ -75,6 +75,9 @@ function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
       size: scaleVec2(room.size, unit),
       doors: room.doors?.map((opening) => scaleOpening(opening, unit, true)),
       windows: room.windows?.map((opening) => scaleOpening(opening, unit, false)),
+      floorOpenings: room.floorOpenings?.map((opening) => scaleSlabOpening(opening, unit)),
+      ceilingOpenings: room.ceilingOpenings?.map((opening) => scaleSlabOpening(opening, unit)),
+      roofOpenings: room.roofOpenings?.map((opening) => scaleSlabOpening(opening, unit)),
     })),
   }
 }
@@ -100,6 +103,15 @@ function scaleOpening(opening: OpeningSpec, unit: number, isDoor: boolean): Open
     width: opening.width * unit,
     bottom: (opening.bottom ?? defaultBottom) * unit,
     height: (opening.height ?? defaultHeight) * unit,
+  }
+}
+
+// 床・天井 slab の開口設定を unit 倍する。
+function scaleSlabOpening(opening: SlabOpeningSpec, unit: number): SlabOpeningSpec {
+  return {
+    ...opening,
+    position: scaleVec2(opening.position, unit),
+    size: scaleVec2(opening.size, unit),
   }
 }
 
@@ -165,7 +177,7 @@ function compileRoof(plan: BuildingPlan): BoxPart[] {
   const thickness = roof.thickness ?? plan.slabThickness
   const heightOffset = roof.heightOffset ?? 0
   const y = plan.floorHeight + heightOffset
-  const rects = splitCoveredRects(plan.rooms.map((room) => {
+  const roofRects = plan.rooms.map((room) => {
     const [x, z] = room.position
     const [width, depth] = room.size
     return {
@@ -174,7 +186,11 @@ function compileRoof(plan: BuildingPlan): BoxPart[] {
       minZ: z - depth / 2 - overhang,
       maxZ: z + depth / 2 + overhang,
     }
-  }))
+  })
+  const openingRects = plan.rooms.flatMap((room) => (
+    room.roofOpenings?.map((opening) => slabOpeningToWorldRect(room, opening)) ?? []
+  ))
+  const rects = splitCoveredRects(roofRects, openingRects)
 
   return rects.map((rect, index) => (
     applySurfaceSpec({
@@ -191,10 +207,19 @@ function compileRoof(plan: BuildingPlan): BoxPart[] {
   ))
 }
 
-// 入力矩形群の union を、重ならない矩形群へ分割する。
-function splitCoveredRects(rects: Rect2D[]): Rect2D[] {
-  const xEdges = sortedUnique(rects.flatMap((rect) => [rect.minX, rect.maxX]))
-  const zEdges = sortedUnique(rects.flatMap((rect) => [rect.minZ, rect.maxZ]))
+// 入力矩形群の union から hole 矩形を引き、重ならない矩形群へ分割する。
+function splitCoveredRects(rects: Rect2D[], holes: Rect2D[] = []): Rect2D[] {
+  const clippedHoles = holes
+    .flatMap((hole) => rects.map((rect) => intersectRects(rect, hole)))
+    .filter((rect): rect is Rect2D => rect !== undefined)
+  const xEdges = sortedUnique([
+    ...rects.flatMap((rect) => [rect.minX, rect.maxX]),
+    ...clippedHoles.flatMap((rect) => [rect.minX, rect.maxX]),
+  ])
+  const zEdges = sortedUnique([
+    ...rects.flatMap((rect) => [rect.minZ, rect.maxZ]),
+    ...clippedHoles.flatMap((rect) => [rect.minZ, rect.maxZ]),
+  ])
   const coveredRows: Rect2D[] = []
 
   for (let zIndex = 0; zIndex < zEdges.length - 1; zIndex += 1) {
@@ -206,15 +231,17 @@ function splitCoveredRects(rects: Rect2D[]): Rect2D[] {
       const minX = xEdges[xIndex]
       const maxX = xEdges[xIndex + 1]
       const covered = rects.some((rect) => rectCoversCell(rect, minX, maxX, minZ, maxZ))
+      const removedByHole = clippedHoles.some((rect) => rectCoversCell(rect, minX, maxX, minZ, maxZ))
+      const keep = covered && !removedByHole
 
-      if (covered && currentStartX === undefined) {
+      if (keep && currentStartX === undefined) {
         currentStartX = minX
       }
 
-      if ((!covered || xIndex === xEdges.length - 2) && currentStartX !== undefined) {
+      if ((!keep || xIndex === xEdges.length - 2) && currentStartX !== undefined) {
         coveredRows.push({
           minX: currentStartX,
-          maxX: covered ? maxX : minX,
+          maxX: keep ? maxX : minX,
           minZ,
           maxZ,
         })
@@ -257,6 +284,123 @@ function mergeVerticalRects(rects: Rect2D[]): Rect2D[] {
   return merged
 }
 
+// 床・天井 slab を、開口を除いた非重複矩形 box 群として生成する。
+function compileSlab(input: {
+  room: RoomSpec
+  kind: 'floor' | 'ceiling'
+  y: number
+  thickness: number
+  materialKey: string
+  color?: BoxPartColor
+  surface?: SurfaceSpec
+  openings: SlabOpeningSpec[]
+}): BoxPart[] {
+  const { room, kind, y, thickness, materialKey, color, surface, openings } = input
+  const rects = splitRoomRectBySlabOpenings(room, openings)
+
+  return rects.map((rect, index) => applySurfaceSpec({
+    id: rects.length === 1 ? `${room.id}:${kind}` : `${room.id}:${kind}:${index}`,
+    kind,
+    position: [(rect.minX + rect.maxX) / 2, y, (rect.minZ + rect.maxZ) / 2],
+    size: [rect.maxX - rect.minX, thickness, rect.maxZ - rect.minZ],
+    materialKey,
+    color,
+    collider: true,
+  }, surface))
+}
+
+// 部屋矩形から床・天井開口を引き、残った slab 領域を非重複矩形に分割する。
+function splitRoomRectBySlabOpenings(room: RoomSpec, openings: SlabOpeningSpec[]): Rect2D[] {
+  const [roomX, roomZ] = room.position
+  const [width, depth] = room.size
+  const roomRect: Rect2D = {
+    minX: roomX - width / 2,
+    maxX: roomX + width / 2,
+    minZ: roomZ - depth / 2,
+    maxZ: roomZ + depth / 2,
+  }
+  const openingRects = openings
+    .map((opening) => slabOpeningToWorldRect(room, opening))
+    .map((rect) => intersectRects(roomRect, rect))
+    .filter((rect): rect is Rect2D => rect !== undefined)
+
+  if (openingRects.length === 0) {
+    return [roomRect]
+  }
+
+  const xEdges = sortedUnique([
+    roomRect.minX,
+    roomRect.maxX,
+    ...openingRects.flatMap((rect) => [rect.minX, rect.maxX]),
+  ])
+  const zEdges = sortedUnique([
+    roomRect.minZ,
+    roomRect.maxZ,
+    ...openingRects.flatMap((rect) => [rect.minZ, rect.maxZ]),
+  ])
+  const rows: Rect2D[] = []
+
+  for (let zIndex = 0; zIndex < zEdges.length - 1; zIndex += 1) {
+    const minZ = zEdges[zIndex]
+    const maxZ = zEdges[zIndex + 1]
+    let currentStartX: number | undefined
+
+    for (let xIndex = 0; xIndex < xEdges.length - 1; xIndex += 1) {
+      const minX = xEdges[xIndex]
+      const maxX = xEdges[xIndex + 1]
+      const insideRoom = rectCoversCell(roomRect, minX, maxX, minZ, maxZ)
+      const coveredByOpening = openingRects.some((rect) => rectCoversCell(rect, minX, maxX, minZ, maxZ))
+      const keep = insideRoom && !coveredByOpening
+
+      if (keep && currentStartX === undefined) {
+        currentStartX = minX
+      }
+
+      if ((!keep || xIndex === xEdges.length - 2) && currentStartX !== undefined) {
+        rows.push({
+          minX: currentStartX,
+          maxX: keep ? maxX : minX,
+          minZ,
+          maxZ,
+        })
+        currentStartX = undefined
+      }
+    }
+  }
+
+  return mergeVerticalRects(rows)
+}
+
+// 部屋中心基準の床・天井開口を world-space XZ 矩形へ変換する。
+function slabOpeningToWorldRect(room: RoomSpec, opening: SlabOpeningSpec): Rect2D {
+  const [roomX, roomZ] = room.position
+  const [offsetX, offsetZ] = opening.position
+  const [width, depth] = opening.size
+  const centerX = roomX + offsetX
+  const centerZ = roomZ + offsetZ
+
+  return {
+    minX: centerX - width / 2,
+    maxX: centerX + width / 2,
+    minZ: centerZ - depth / 2,
+    maxZ: centerZ + depth / 2,
+  }
+}
+
+// 2 つの XZ 矩形の交差を返す。
+function intersectRects(a: Rect2D, b: Rect2D): Rect2D | undefined {
+  const minX = Math.max(a.minX, b.minX)
+  const maxX = Math.min(a.maxX, b.maxX)
+  const minZ = Math.max(a.minZ, b.minZ)
+  const maxZ = Math.min(a.maxZ, b.maxZ)
+
+  if (maxX - minX <= EPSILON || maxZ - minZ <= EPSILON) {
+    return undefined
+  }
+
+  return { minX, maxX, minZ, maxZ }
+}
+
 // 1 部屋から床、天井、壁、柱の BoxPart を生成する。
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
@@ -267,24 +411,26 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const ceilingSurface = room.surfaces?.ceiling
 
   const parts: BoxPart[] = [
-    applySurfaceSpec({
-      id: `${room.id}:floor`,
+    ...compileSlab({
+      room,
       kind: 'floor',
-      position: [x, floorY, z],
-      size: [width, plan.slabThickness, depth],
+      y: floorY,
+      thickness: plan.slabThickness,
       materialKey: floorSurface?.materialKey ?? plan.materialKeys.room.floor,
       color: floorSurface?.color,
-      collider: true,
-    }, floorSurface),
-    applySurfaceSpec({
-      id: `${room.id}:ceiling`,
+      surface: floorSurface,
+      openings: room.floorOpenings ?? [],
+    }),
+    ...compileSlab({
+      room,
       kind: 'ceiling',
-      position: [x, ceilingY, z],
-      size: [width, plan.slabThickness, depth],
+      y: ceilingY,
+      thickness: plan.slabThickness,
       materialKey: ceilingSurface?.materialKey ?? plan.materialKeys.room.ceiling,
       color: ceilingSurface?.color,
-      collider: true,
-    }, ceilingSurface),
+      surface: ceilingSurface,
+      openings: room.ceilingOpenings ?? [],
+    }),
   ]
 
   for (const side of ['north', 'south', 'east', 'west'] as WallSide[]) {
