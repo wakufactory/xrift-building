@@ -66,7 +66,7 @@ roof: {
 
 - `overhang` は各 room 矩形から外側へ張り出す量です。
 - `thickness` は屋根 slab の厚みです。省略時は `slabThickness` を使います。
-- `heightOffset` は `floorHeight` を基準に屋根位置を上下へずらす量です。正の値で上、負の値で下に移動します。
+- `heightOffset` は `floorHeight` を基準に屋根位置を上下へずらす量です。`0` のとき屋根の中心が建物高さの上端に乗り、厚みの半分が上へはみ出します。正の値で上、負の値で下に移動します。
 - `materialKey` を省略すると `materialKeys.roof`、それもなければ `materialKeys.room.ceiling` を使います。
 - `roof: false` または未指定なら屋根は生成しません。
 
@@ -91,7 +91,7 @@ plan の `position` と `size` は XZ 平面で指定します。
 
 - `position: [x, z]` は部屋の中心です。
 - `size: [width, depth]` は X 方向の幅と Z 方向の奥行きです。
-- Y 方向の高さは `floorHeight` で決まります。
+- Y 方向の建物高さは `floorHeight` で決まります。床 slab は `0..slabThickness`、天井 slab は `floorHeight - slabThickness..floorHeight` に収まります。壁と柱は従来通り `0..floorHeight` です。
 
 壁の向きは次の通りです。
 
@@ -261,7 +261,7 @@ const frame = getWallPlacement(plan1, {
 </group>
 ```
 
-床の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。`height` は床上面からの高さ、`inset` は壁の室内面から部屋内側へずらす距離です。
+床の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。床配置の `height` は床 slab 上面からの高さ、壁配置の `height` は従来通り壁の下端からの高さです。`inset` は壁の室内面から部屋内側へずらす距離です。
 
 children を直接囲んで配置したい場合は `RoomObject` / `WallObject` を使います。
 

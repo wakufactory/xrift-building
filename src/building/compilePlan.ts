@@ -124,7 +124,7 @@ function compileExteriorGround(plan: BuildingPlan): BoxPart[] {
       kind: 'exteriorGround',
       // 室内床と同じ高さに見せつつ、室内床と重なる部分で z-fighting
       // しないように、外部地面だけごくわずかに下げている。
-      position: [centerX, -thickness / 2 - 0.002, centerZ],
+      position: [centerX, plan.slabThickness - thickness / 2 - 0.002, centerZ],
       size: [width, thickness, depth],
       materialKey: ground.materialKey ?? plan.materialKeys.exteriorGround,
       collider: true,
@@ -164,7 +164,7 @@ function compileRoof(plan: BuildingPlan): BoxPart[] {
   const overhang = roof.overhang ?? 0
   const thickness = roof.thickness ?? plan.slabThickness
   const heightOffset = roof.heightOffset ?? 0
-  const y = plan.floorHeight + heightOffset + plan.slabThickness + thickness / 2
+  const y = plan.floorHeight + heightOffset
   const rects = splitCoveredRects(plan.rooms.map((room) => {
     const [x, z] = room.position
     const [width, depth] = room.size
@@ -261,8 +261,8 @@ function mergeVerticalRects(rects: Rect2D[]): Rect2D[] {
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size
-  const floorY = -plan.slabThickness / 2
-  const ceilingY = plan.floorHeight + plan.slabThickness / 2
+  const floorY = plan.slabThickness / 2
+  const ceilingY = plan.floorHeight - plan.slabThickness / 2 - 0.001
   const floorSurface = room.surfaces?.floor
   const ceilingSurface = room.surfaces?.ceiling
 
@@ -308,7 +308,8 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
         roomCenter: [x, z],
         roomSize: [width, depth],
         wallThickness: plan.wallThickness,
-        floorHeight: plan.floorHeight,
+        bottomY: 0,
+        height: plan.floorHeight,
         materialKey: wallSurface.materialKey ?? plan.materialKeys.room.wall,
         color: wallSurface.color,
         surface: wallSurface,
@@ -326,7 +327,7 @@ function getSharedWallOpeningsOwnedByAnotherRoom(
   rooms: RoomSpec[],
   room: RoomSpec,
   side: WallSide,
-  floorHeight: number,
+  roomHeight: number,
 ): OpeningSpec[] {
   // 隣接する部屋は同じ境界面を共有することがある。同じ面に mesh と
   // collider が二重生成されないよう、辞書順で先の部屋が共有区間を
@@ -345,7 +346,7 @@ function getSharedWallOpeningsOwnedByAnotherRoom(
       offset: (overlap.start + overlap.end) / 2,
       width: overlap.end - overlap.start,
       bottom: 0,
-      height: floorHeight,
+      height: roomHeight,
     }]
   })
 }
@@ -475,17 +476,18 @@ function compileWall(input: {
   roomCenter: [number, number]
   roomSize: [number, number]
   wallThickness: number
-  floorHeight: number
+  bottomY: number
+  height: number
   materialKey: string
   color?: BoxPartColor
   surface?: SurfaceSpec
   openings: OpeningSpec[]
 }): BoxPart[] {
-  const { roomId, side, roomCenter, roomSize, wallThickness, floorHeight, materialKey, color, surface, openings } = input
+  const { roomId, side, roomCenter, roomSize, wallThickness, bottomY, height, materialKey, color, surface, openings } = input
   const [roomX, roomZ] = roomCenter
   const [width, depth] = roomSize
   const wallLength = side === 'north' || side === 'south' ? width : depth
-  const segments = splitWallSegments(wallLength, floorHeight, openings)
+  const segments = splitWallSegments(wallLength, height, openings)
 
   // 壁の分割は、まず壁ローカルの 2D 空間で解く。開口を引き終わって
   // から world-space の position と box size に戻すことで、分割処理を
@@ -493,7 +495,7 @@ function compileWall(input: {
   return segments.map((segment, index) => {
     const centerAlongWall = (segment.start + segment.end) / 2
     const segmentLength = segment.end - segment.start
-    const centerY = (segment.bottom + segment.top) / 2
+    const centerY = bottomY + (segment.bottom + segment.top) / 2
     const segmentHeight = segment.top - segment.bottom
 
     return applySurfaceSpec({

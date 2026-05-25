@@ -52,10 +52,11 @@ export function getRoomFloorFrame(plan: BuildingPlan, roomId: string): RoomFloor
   const room = scaleRoom(sourceRoom, unit)
   const [x, z] = room.position
   const [width, depth] = room.size
+  const floorTopY = plan.slabThickness * unit
 
   return {
     room,
-    center: [x, 0, z],
+    center: [x, floorTopY, z],
     size: [width, depth],
     minX: x - width / 2,
     maxX: x + width / 2,
@@ -127,7 +128,7 @@ export function getFloorPlacement(plan: BuildingPlan, input: FloorPlacementInput
   return {
     position: [
       frame.center[0] + offsetX * unit,
-      (input.height ?? 0) * unit,
+      frame.center[1] + (input.height ?? 0) * unit,
       frame.center[2] + offsetZ * unit,
     ],
     rotation: [0, input.rotationY ?? 0, 0],

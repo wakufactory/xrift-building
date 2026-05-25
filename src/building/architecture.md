@@ -92,7 +92,8 @@ xrift-building-world/
   - 未指定時は `1` です。
   - `compileBuildingPlan()` の入口で一度だけ実座標へスケールされ、以後の処理は world units で動きます。
 - `floorHeight: number`
-  - 床上面から天井下までの壁高さです。
+  - 床 slab 下端から天井 slab 上端までの建物高さです。
+  - 床と天井はこの範囲内に収まります。壁と柱の位置・高さは従来通り `0..floorHeight` です。
 - `wallThickness: number`
   - 壁 box の厚みです。
 - `slabThickness: number`
@@ -191,11 +192,11 @@ opening の `offset` は壁ローカル座標です。
 
 - `getFloorPlacement(plan, { roomId, offset, height, rotationY })`
   - `offset` は部屋中心からの `[x, z]` です。
-  - `height` は床上面からの高さです。
+  - `height` は床 slab 上面からの高さです。
   - plan の `unit` を反映した `position` と `[0, rotationY, 0]` を返します。
 - `getWallPlacement(plan, { roomId, side, offset, height, inset })`
   - `offset` は door/window と同じ壁ローカル座標です。
-  - `height` は床上面からの高さです。
+  - `height` は従来通り壁の下端からの高さです。
   - `inset` は壁の室内面から部屋内側へずらす距離です。
   - 返す `rotation` は object の local `+Z` が部屋内側を向く向きです。
 - `getRoomFloorFrame()` / `getRoomWallFrame()`
@@ -252,6 +253,8 @@ opening の `offset` は壁ローカル座標です。
 
 床、壁、天井は `plan.materialKeys.room` をデフォルトにし、`room.surfaces` で上書きします。
 
+床 slab は `0..plan.slabThickness`、天井 slab は `plan.floorHeight - plan.slabThickness..plan.floorHeight` に収まります。壁と柱は従来通り `0..plan.floorHeight` に生成します。
+
 壁は各 side ごとに `compileWall()` へ渡されます。ドア、窓、共有壁の重複除去は、すべて壁ローカルの矩形開口として扱います。
 
 ### 4. 共有壁
@@ -277,7 +280,7 @@ opening の `offset` は壁ローカル座標です。
 - `overhang` のデフォルトは `0` です。
 - `thickness` のデフォルトは `plan.slabThickness` です。
 - `heightOffset` のデフォルトは `0` です。正の値で上、負の値で下に移動します。
-- Y 位置は既存の天井 slab の上面に載るよう、`plan.floorHeight + heightOffset + plan.slabThickness + thickness / 2` です。
+- Y 位置は `plan.floorHeight + heightOffset` です。`heightOffset = 0` では屋根 slab の中心が建物高さの上端に乗り、厚みの半分が上へはみ出します。
 - material key は `roof.materialKey ?? plan.materialKeys.roof ?? plan.materialKeys.room.ceiling` です。
 
 ### 7. 柱
