@@ -3,7 +3,7 @@ import { RigidBody } from '@react-three/rapier'
 import { Buildings } from './worldPlan.tsx'
 import { Buildings2 } from './worldPlan2.tsx'
 import { PlayerShadowLight } from './components/PlayerShadowLight'
-import { Text } from '@react-three/drei'
+
 
 export interface WorldProps {
   position?: [number, number, number]
@@ -30,18 +30,7 @@ export const World: React.FC<WorldProps> = () => {
       <hemisphereLight args={['#f4efe3', '#526069', 1.1]} />
       <PlayerShadowLight />
 
-      <Buildings >
-
-      </Buildings>
-            <Text
-        position={[0, 0.5, 0]}
-        fontSize={0.12}
-        color="#ffeb3b"
-        anchorX="center"
-        anchorY="middle"
-      >
-        SampleHouse
-      </Text>
+      <Buildings />
       <Buildings2 position={[30,0,2]}/>
     </>
   )

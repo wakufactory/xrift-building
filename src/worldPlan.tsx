@@ -49,7 +49,7 @@ export const plan1: BuildingPlan = {
       size: [8, 10],
       surfaces: {
         floor: { materialKey: 'floor:warm-wood' },
-        wall: { materialKey: 'wall:gallery-white' },
+        wall: { materialKey: 'debug:measure-grid' },
         walls: {
           north: { color: '#208020' },
         },
@@ -160,10 +160,10 @@ export const plan2: BuildingPlan = {
         { position: [-2.5, -2], size: [2, 2] },
       ],
        ceilingOpenings: [
-        { position: [0, 0], size: [2, 2] },
+        { position: [2, 2], size: [2, 2] },
       ],
        roofOpenings: [
-        { position: [0, 0], size: [2-0.01, 2-0.01] },
+        { position: [2, 2], size: [2-0.01, 2-0.01] },
       ],      
     },
   ]

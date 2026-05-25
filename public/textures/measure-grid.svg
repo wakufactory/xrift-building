@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#f7f7f2"/>
+  <path d="M51.2 0v512M102.4 0v512M153.6 0v512M204.8 0v512M256 0v512M307.2 0v512M358.4 0v512M409.6 0v512M460.8 0v512" stroke="#b8c1c8" stroke-width="2"/>
+  <path d="M0 51.2h512M0 102.4h512M0 153.6h512M0 204.8h512M0 256h512M0 307.2h512M0 358.4h512M0 409.6h512M0 460.8h512" stroke="#b8c1c8" stroke-width="2"/>
+  <path d="M0 0h512v512H0zM256 0v512M0 256h512" fill="none" stroke="#1f2933" stroke-width="8"/>
+  <path d="M0 0h512v512H0z" fill="none" stroke="#e5484d" stroke-width="16"/>
+  <path d="M0 0l512 512M512 0L0 512" stroke="#2f80ed" stroke-width="5" opacity=".85"/>
+  <circle cx="256" cy="256" r="18" fill="#e5484d"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" fill="#1f2933">
+    <text x="22" y="48">0</text>
+    <text x="410" y="48">1U</text>
+    <text x="20" y="490">1V</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#50616f">
+    <text x="214" y="40">50%</text>
+    <text x="274" y="250">50%</text>
+    <text x="95" y="500">.2</text>
+    <text x="197" y="500">.4</text>
+    <text x="300" y="500">.6</text>
+    <text x="402" y="500">.8</text>
+  </g>
+</svg>

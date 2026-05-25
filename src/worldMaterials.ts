@@ -10,6 +10,15 @@ export const worldBuildingMaterials = {
       tileSize: [0.5, 0.5],
     },
   },
+  'debug:measure-grid': {
+    color: '#ffffff',
+    roughness: 0.82,
+    metalness: 0,
+    texture: {
+      map: 'textures/measure-grid.svg',
+      tileSize: [1, 1],
+    },
+  },
   'floor:stone': {
     color: '#747b7c',
     roughness: 0.9,
