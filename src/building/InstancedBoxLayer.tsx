@@ -2,7 +2,7 @@ import { createContext, forwardRef, useCallback, useContext, useEffect, useId, u
 import { useTexture } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useXRift } from '@xrift/world-components'
-import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, MirroredRepeatWrapping, Quaternion, RepeatWrapping, SRGBColorSpace, Texture, Vector3 } from 'three'
+import { BoxGeometry, ClampToEdgeWrapping, Color, Euler, Float32BufferAttribute, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, MirroredRepeatWrapping, Quaternion, RepeatWrapping, SRGBColorSpace, Texture, Vector2, Vector3 } from 'three'
 import type { BoxInstance, BoxInstanceSource, BoxPartColor } from './types'
 import { missingBoxMaterial, type BoxMaterialCatalog, type BoxMaterialParameters, type BoxTextureSpec } from './materials'
 import { BoxColliders } from './BuildingColliders'
@@ -323,23 +323,26 @@ function TexturedInstancedBoxes({
   const { baseUrl } = useXRift()
   const textureUrl = resolveTextureUrl(baseUrl, texture.map)
   const sourceMap = useTexture(textureUrl)
+  const textureConfigKey = getTextureConfigKey(texture)
   const map = useMemo(() => {
     const nextMap = sourceMap.clone()
     configureTexture(nextMap, texture)
     return nextMap
-  }, [sourceMap, texture])
+  }, [sourceMap, texture, textureConfigKey])
   const sharedMaterial = useMemo(() => {
     const { color: _color, texture: _texture, ...rest } = material
     return rest
   }, [material])
   const meshMaterial = useMemo(() => {
-    return new MeshStandardMaterial({
+    const nextMaterial = new MeshStandardMaterial({
       ...sharedMaterial,
       color: '#ffffff',
       map,
       vertexColors: true,
     })
-  }, [map, sharedMaterial])
+    applyBoxTextureTiling(nextMaterial, texture)
+    return nextMaterial
+  }, [map, sharedMaterial, texture, textureConfigKey])
 
   useEffect(() => {
     return () => {
@@ -382,9 +385,16 @@ function InstancedBoxesMesh({
     () => new InstancedBufferAttribute(instanceColors, 3),
     [instanceColors],
   )
+  const instanceSizeAttribute = useMemo(
+    () => new InstancedBufferAttribute(createInstanceSizeBuffer(parts), 3),
+    [parts],
+  )
   const mesh = useMemo(() => {
+    const geometry = unitBoxGeometry.clone()
+    geometry.setAttribute('instanceSize', instanceSizeAttribute)
+
     const instancedMesh = new InstancedMesh(
-      unitBoxGeometry,
+      geometry,
       material,
       parts.length,
     )
@@ -393,15 +403,18 @@ function InstancedBoxesMesh({
     instancedMesh.castShadow = true
     instancedMesh.receiveShadow = true
     return instancedMesh
-  }, [instanceColorAttribute, material, parts.length])
+  }, [instanceColorAttribute, instanceSizeAttribute, material, parts.length])
 
   useEffect(() => {
     return () => {
+      mesh.geometry.dispose()
       mesh.material.dispose()
     }
   }, [mesh])
 
   useLayoutEffect(() => {
+    mesh.geometry.setAttribute('instanceSize', instanceSizeAttribute)
+    instanceSizeAttribute.needsUpdate = true
     mesh.instanceColor = instanceColorAttribute
     mesh.instanceColor.needsUpdate = true
     mesh.userData.boxInstances = parts.map((part) => ({
@@ -428,9 +441,85 @@ function InstancedBoxesMesh({
     mesh.instanceMatrix.needsUpdate = true
     mesh.computeBoundingSphere()
     invalidate()
-  }, [instanceColorAttribute, invalidate, mesh, parts])
+  }, [instanceColorAttribute, instanceSizeAttribute, invalidate, mesh, parts])
 
   return <primitive object={mesh} />
+}
+
+// 各 instance の実寸を shader attribute に詰める。
+function createInstanceSizeBuffer(parts: BoxInstance[]) {
+  const buffer = new Float32Array(parts.length * 3)
+
+  parts.forEach((part, index) => {
+    buffer[index * 3] = Math.abs(part.size[0])
+    buffer[index * 3 + 1] = Math.abs(part.size[1])
+    buffer[index * 3 + 2] = Math.abs(part.size[2])
+  })
+
+  return buffer
+}
+
+// tileSize 指定時だけ、box の実寸から texture UV を作る shader 差し替えを入れる。
+function applyBoxTextureTiling(material: MeshStandardMaterial, texture: BoxTextureSpec) {
+  const tileSize = normalizeTextureTileSize(texture.tileSize)
+  if (!tileSize) {
+    return
+  }
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.boxTextureTileSize = { value: tileSize.clone() }
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <uv_pars_vertex>',
+        `#include <uv_pars_vertex>
+attribute vec3 instanceSize;
+uniform vec2 boxTextureTileSize;
+
+vec2 getBoxTiledMapUv(vec2 baseUv, vec3 localNormal, vec3 boxSize) {
+  vec3 normalAxis = abs(localNormal);
+  vec2 faceSize = vec2(boxSize.x, boxSize.y);
+
+  if (normalAxis.y >= normalAxis.x && normalAxis.y >= normalAxis.z) {
+    faceSize = vec2(boxSize.x, boxSize.z);
+  } else if (normalAxis.x >= normalAxis.z) {
+    faceSize = vec2(boxSize.z, boxSize.y);
+  }
+
+  return baseUv * faceSize / max(boxTextureTileSize, vec2(0.0001));
+}`,
+      )
+      .replace(
+        '#include <uv_vertex>',
+        `#include <uv_vertex>
+#ifdef USE_MAP
+  vMapUv = ( mapTransform * vec3( getBoxTiledMapUv( MAP_UV, normal, instanceSize ), 1 ) ).xy;
+#endif`,
+      )
+  }
+  material.customProgramCacheKey = () => `box-texture-tile:${tileSize.x}:${tileSize.y}`
+}
+
+function normalizeTextureTileSize(tileSize: BoxTextureSpec['tileSize']) {
+  if (tileSize === undefined) {
+    return null
+  }
+
+  if (Array.isArray(tileSize)) {
+    return new Vector2(Math.max(tileSize[0], 0.0001), Math.max(tileSize[1], 0.0001))
+  }
+
+  const safeTileSize = Math.max(tileSize, 0.0001)
+  return new Vector2(safeTileSize, safeTileSize)
+}
+
+function getTextureConfigKey(texture: BoxTextureSpec) {
+  return JSON.stringify({
+    tileSize: texture.tileSize ?? null,
+    repeat: texture.repeat ?? null,
+    offset: texture.offset ?? null,
+    rotation: texture.rotation ?? null,
+    wrap: texture.wrap ?? null,
+  })
 }
 
 // XRift の baseUrl と texture path から実際の texture URL を解決する。

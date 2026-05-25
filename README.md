@@ -377,6 +377,7 @@ texture を使う場合は `public/` 以下にファイルを置き、`texture.m
   roughness: 0.85,
   texture: {
     map: 'textures/tile.png',
+    tileSize: [1, 1],
     repeat: [4, 4],
     wrap: 'repeat',
   },
@@ -384,6 +385,8 @@ texture を使う場合は `public/` 以下にファイルを置き、`texture.m
 ```
 
 XRift 配信時の asset path に合わせるため、内部では `useXRift().baseUrl` と結合して読み込まれます。`/textures/tile.png` のように先頭 `/` を付けても取り除かれますが、plan では `textures/tile.png` の形に揃えるのが分かりやすいです。
+
+`texture.tileSize` を指定すると、box の実寸に対して一定の大きさで texture を貼ります。`tileSize: [1, 1]` は、床・天井では X/Z 方向、東西壁では Z/Y 方向、南北壁では X/Y 方向に 1 world unit で 1 周期になります。`repeat` はその上に掛かる追加倍率です。`tileSize` を省略した texture は従来通り、unit box の UV と `repeat` だけで貼られます。
 
 material key が catalog に存在しない場合は、ピンク色の fallback material が使われます。
 

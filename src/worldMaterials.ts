@@ -7,7 +7,7 @@ export const worldBuildingMaterials = {
     metalness: 0,
     texture: {
       map: 'textures/warm-wood.svg',
-      repeat: [4, 5],
+      tileSize: [0.5, 0.5],
     },
   },
   'floor:stone': {

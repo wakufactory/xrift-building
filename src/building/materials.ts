@@ -6,6 +6,7 @@ export type BoxTextureWrap = 'repeat' | 'clamp' | 'mirror'
 // material catalog から読み込む texture 設定を表す。
 export type BoxTextureSpec = {
   map: string
+  tileSize?: number | [number, number]
   repeat?: [number, number]
   offset?: [number, number]
   rotation?: number

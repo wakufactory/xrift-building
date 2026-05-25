@@ -327,11 +327,12 @@ opening の `offset` は壁ローカル座標です。
 
 `BuildingWorld` は `source.kind = 'buildingWorld'` を `Building` に渡し、`Building` は各 `BoxPart.source` にそれを付与してから `BoxLayer` へ渡します。直接置いた `BoxLayer` は `kind` が常に `boxLayer` で、`id` / `label` props だけを受け取ります。統合後の `InstancedMesh.userData.boxInstances[instanceId]` から、元の `BoxInstance.id`、`materialKey`、`source` を参照できます。
 
-material catalog に texture がある場合は `useXRift().baseUrl` と `texture.map` を結合して `useTexture()` で読み込みます。`texture.map` が `http:`, `https:`, `data:`, `blob:` から始まる場合はそのまま使います。
+material catalog に texture がある場合は `useXRift().baseUrl` と `texture.map` を結合して `useTexture()` で読み込みます。`texture.map` が `http:`, `https:`, `data:`, `blob:` から始まる場合はそのまま使います。`texture.tileSize` を指定した material は、shader で `instanceSize` から面ごとの world-unit UV を作るため、box のサイズが変わっても texture の密度が一定になります。`tileSize` を省略した material は従来通り unit box の UV と `texture.repeat` で貼られます。
 
 各 instance には以下を設定します。
 
 - matrix: `position`, `rotation`, `size`
+- instance size: texture の `tileSize` 指定時に shader が world-unit UV を作るための `size`
 - instance color: `BoxInstance.color ?? material.color ?? '#ffffff'`
 
 material 自体の `color` は白にし、`vertexColors: true` と `instanceColor` で表面色を出します。これにより、同じ material key なら色違いでも 1 つの instanced mesh にまとめられます。
