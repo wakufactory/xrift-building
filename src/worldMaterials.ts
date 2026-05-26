@@ -1,4 +1,4 @@
-import type { BoxMaterialCatalog } from './building/materials'
+import type { BoxMaterialCatalog } from './building'
 
 export const worldBuildingMaterials = {
   'floor:warm-wood': {
@@ -6,7 +6,7 @@ export const worldBuildingMaterials = {
     roughness: 0.78,
     metalness: 0,
     texture: {
-      map: 'textures/warm-wood.svg',
+      map: 'textures/warm-wood.png',
       tileSize: [0.5, 0.5],
     },
   },
@@ -15,7 +15,7 @@ export const worldBuildingMaterials = {
     roughness: 0.82,
     metalness: 0,
     texture: {
-      map: 'textures/measure-grid.svg',
+      map: 'textures/measure-grid.png',
       tileSize: [1, 1],
     },
   },
