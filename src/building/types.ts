@@ -60,6 +60,7 @@ export type RoomSpec = {
   id: string
   position: Vec2
   size: Vec2
+  wallThickness?: number
   surfaces?: RoomSurfaces
   doors?: OpeningSpec[]
   windows?: OpeningSpec[]
