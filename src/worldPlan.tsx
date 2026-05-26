@@ -3,9 +3,9 @@ import { useFrame} from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import { Mesh } from 'three'
 import { RigidBody} from '@react-three/rapier'
-import { worldBuildingMaterials } from './worldMaterials'
 import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject } from './building'
 import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2, Vec3 } from './building'
+import { worldBuildingMaterials } from './worldMaterials'
 
 /// north -z east +x south +z west x
 
