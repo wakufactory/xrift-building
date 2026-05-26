@@ -2,7 +2,7 @@
   "world": {
     "distDir": "./dist",
     "title": "Instanced Building World",
-    "description": "コードベースの部屋定義から建物を生成するワールド(開発中)",
+    "description": "コードベースの部屋定義から建物を生成するワールド（開発中）",
     "thumbnailPath": "thumbnail.jpg",
     "buildCommand": "npm run build",
     "ignore": [
