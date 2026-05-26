@@ -4,8 +4,9 @@ import { Text } from '@react-three/drei'
 import { Mesh } from 'three'
 import { RigidBody} from '@react-three/rapier'
 import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject } from './building'
-import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2, Vec3 } from './building'
+import type { BuildingPlan, Vec3 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
+import { TableObject,WindowFrame,DoorFrame } from './fittings.tsx'
 
 /// north -z east +x south +z west x
 
@@ -166,40 +167,6 @@ export const plan2: BuildingPlan = {
   ]
 }
 
-//テーブル
-const TableObject = ({
-    size = [1,1],
-    color = '#5d4646'
-  } : {
-    size?:Vec2,
-    color?:BoxPartColor
-}) => {
-  const tableBoxes: BoxInstance[] = [
-    {
-      id: 'table-leg',
-      position: [0, 0.5, 0],
-      size: [0.2, 1, 0.2],
-      materialKey: 'furniture:neutral',
-      collider: false,
-      color:color
-    },
-    {
-      id: 'table-f',
-      position: [0, 1.0, 0],
-      size: [size[0], 0.05, size[1]],
-      materialKey: 'furniture:neutral',
-      color:color
-    },
-  ]
-  return(
-    <BoxLayer
-      id={'table-boxes'}
-      parts={tableBoxes}
-      materials={worldBuildingMaterials}
-      collider
-    />
-  )
-}
 //回転オブジェクト
 const Rotateobj = ()=>{
   const poll = useRef<Mesh>(null)
@@ -214,6 +181,7 @@ const Rotateobj = ()=>{
     </mesh> 
   )
 }
+
 //全体の組み立て
 export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
 
@@ -240,7 +208,7 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
         <RoomObject roomId="2-gallery" position={[0, 0]} >
           <Rotateobj/>
         </RoomObject>
-        //壁オブジェクト
+        //壁オブジェクト(板)
         <WallObject roomId="1-robby" side="east" offset={-1} height={2} >
           <mesh position={[0, 0, 0.1]}>
             <planeGeometry args={[2, 2]} />
@@ -256,6 +224,20 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
             </mesh>
           </RigidBody>
         </RoomObject>
+        //窓枠
+        <WallObject roomId="1-robby" side='south' offset={0} height={2}>
+          <WindowFrame windowSize={[5,2]} frameSize={[0.1,0.3]}/>
+        </WallObject>
+        <WallObject roomId="1-robby" side='west' offset={1} height={1.5}>
+          <WindowFrame windowSize={[1.5,1]} frameSize={[0.1,0.3]}/>
+        </WallObject>
+        <WallObject roomId="1-robby" side='west' offset={-2.5} height={1.5}>
+          <WindowFrame windowSize={[1.5,1]} frameSize={[0.1,0.3]}/>
+        </WallObject>
+        //ドア  offset: 2.7, width: 2.1, height: 2.25 
+        <WallObject roomId="1-robby" side='east' offset={2.7} height={2.25/2}>
+          <DoorFrame doorSize={[2.1,2.25]} doorThickness={0.1}/>
+        </WallObject>
       </BuildingWorld>
       //二階
       {true &&
@@ -288,6 +270,7 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
         materials={worldBuildingMaterials}
         collider
       />
+      //ラベル
       <Text
         position={[5, 1, 15]}
         fontSize={0.8}

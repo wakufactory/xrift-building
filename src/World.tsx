@@ -4,7 +4,7 @@ import { Buildings } from './worldPlan.tsx'
 import { Buildings2 } from './worldPlan2.tsx'
 import { Buildings3 } from './worldPlan3.tsx'
 import { PlayerShadowLight } from './components/PlayerShadowLight'
-
+import {SimpleBuilding} from './worldPlan0.tsx' 
 
 export interface WorldProps {
   position?: [number, number, number]
@@ -34,6 +34,8 @@ export const World: React.FC<WorldProps> = () => {
       <Buildings />
       <Buildings2 position={[30,0,2]}/>
       <Buildings3 position={[0, 0, -75]} />
+
+      <SimpleBuilding position={[0,0,60]} />
     </>
   )
 }
