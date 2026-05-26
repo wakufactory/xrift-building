@@ -30,12 +30,13 @@ type BoxBatchEntry = {
   parts: BoxInstance[]
   materials: BoxMaterialCatalog
   source: BoxInstanceSource
-  matrixWorld: Matrix4
+  matrix: Matrix4
 }
 
 // BoxLayer が Provider に自身を登録するための context 値を表す。
 type BoxBatchContextValue = {
   register: (entry: BoxBatchEntry) => () => void
+  getProviderMatrixWorld: () => Matrix4 | null
 }
 
 const unitBoxGeometry = createUnitBoxGeometry()
@@ -43,6 +44,7 @@ const BoxBatchContext = createContext<BoxBatchContextValue | null>(null)
 
 // 配下の BoxLayer を集約し、material key ごとにまとめて描画する。
 export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
+  const groupRef = useRef<Group>(null)
   const [entries, setEntries] = useState<BoxBatchEntry[]>([])
   const register = useCallback((entry: BoxBatchEntry) => {
     setEntries((current) => {
@@ -59,12 +61,23 @@ export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
       setEntries((current) => current.filter((item) => item.id !== entry.id))
     }
   }, [])
-  const contextValue = useMemo(() => ({ register }), [register])
+  const getProviderMatrixWorld = useCallback(() => {
+    if (!groupRef.current) return null
+
+    groupRef.current.updateWorldMatrix(true, false)
+    return groupRef.current.matrixWorld.clone()
+  }, [])
+  const contextValue = useMemo(
+    () => ({ register, getProviderMatrixWorld }),
+    [getProviderMatrixWorld, register],
+  )
 
   return (
     <BoxBatchContext.Provider value={contextValue}>
-      {children}
-      <BoxLayerRenderer {...mergeBatchEntries(entries)} />
+      <group ref={groupRef}>
+        {children}
+        <BoxLayerRenderer {...mergeBatchEntries(entries)} />
+      </group>
     </BoxBatchContext.Provider>
   )
 }
@@ -95,13 +108,16 @@ export const BoxLayer = forwardRef<Group, BoxLayerProps>(function BoxLayer(
     if (!batchContext || !groupRef.current) return
 
     groupRef.current.updateWorldMatrix(true, false)
-    const matrixWorld = groupRef.current.matrixWorld.clone()
+    const providerMatrixWorld = batchContext.getProviderMatrixWorld()
+    if (!providerMatrixWorld) return
+
+    const matrix = getRelativeMatrix(providerMatrixWorld, groupRef.current.matrixWorld)
     const entry = {
       id: autoId,
       parts,
       materials,
       source,
-      matrixWorld,
+      matrix,
     }
     if (entryRef.current && areEntriesEqual(entryRef.current, entry)) return
 
@@ -160,7 +176,7 @@ function areEntriesEqual(a: BoxBatchEntry, b: BoxBatchEntry) {
     a.parts === b.parts &&
     a.materials === b.materials &&
     areSourcesEqual(a.source, b.source) &&
-    matricesEqual(a.matrixWorld, b.matrixWorld)
+    matricesEqual(a.matrix, b.matrix)
   )
 }
 
@@ -192,17 +208,17 @@ function mergeBatchEntries(entries: BoxBatchEntry[]): Pick<BoxLayerProps, 'parts
     Object.assign(materials, entry.materials)
 
     for (const part of entry.parts) {
-      parts.push(transformPart(part, entry.matrixWorld, part.source ?? entry.source))
+      parts.push(transformPart(part, entry.matrix, part.source ?? entry.source))
     }
   }
 
   return { parts, materials }
 }
 
-// BoxLayer の親 transform を BoxInstance の position / rotation / size に焼き込む。
-function transformPart(part: BoxInstance, matrixWorld: Matrix4, source: BoxInstanceSource): BoxInstance {
+// BoxLayer の transform を Provider ローカル座標として BoxInstance に焼き込む。
+function transformPart(part: BoxInstance, matrix: Matrix4, source: BoxInstanceSource): BoxInstance {
   const localMatrix = new Matrix4()
-  const worldMatrix = new Matrix4()
+  const transformedMatrix = new Matrix4()
   const position = new Vector3()
   const scale = new Vector3()
   const quaternion = new Quaternion()
@@ -213,8 +229,8 @@ function transformPart(part: BoxInstance, matrixWorld: Matrix4, source: BoxInsta
   euler.set(part.rotation?.[0] ?? 0, part.rotation?.[1] ?? 0, part.rotation?.[2] ?? 0)
   quaternion.setFromEuler(euler)
   localMatrix.compose(position, quaternion, scale)
-  worldMatrix.multiplyMatrices(matrixWorld, localMatrix)
-  worldMatrix.decompose(position, quaternion, scale)
+  transformedMatrix.multiplyMatrices(matrix, localMatrix)
+  transformedMatrix.decompose(position, quaternion, scale)
   euler.setFromQuaternion(quaternion)
 
   return {
@@ -224,6 +240,11 @@ function transformPart(part: BoxInstance, matrixWorld: Matrix4, source: BoxInsta
     rotation: [euler.x, euler.y, euler.z],
     source,
   }
+}
+
+// child の world matrix を parent ローカル基準の matrix に変換する。
+function getRelativeMatrix(parentMatrixWorld: Matrix4, childMatrixWorld: Matrix4) {
+  return new Matrix4().copy(parentMatrixWorld).invert().multiply(childMatrixWorld)
 }
 
 // Provider を使わない直接描画時にも source 情報を補う。

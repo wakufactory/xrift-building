@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
@@ -19,6 +19,7 @@ export function BoxColliders({ parts }: BoxCollidersProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
   const matrixRef = useRef<Matrix4 | null>(null)
   const mountedRef = useRef(true)
+  const [colliderScale, setColliderScale] = useState<[number, number, number]>([1, 1, 1])
 
   const syncRigidBodyTransform = () => {
     const rigidBody = rigidBodyRef.current
@@ -35,6 +36,7 @@ export function BoxColliders({ parts }: BoxCollidersProps) {
     matrixWorld.decompose(position, rotation, scale)
     rigidBody.setTranslation(position, true)
     rigidBody.setRotation(rotation, true)
+    setColliderScaleIfChanged(setColliderScale, [scale.x, scale.y, scale.z])
     matrixRef.current = matrixWorld.clone()
   }
 
@@ -63,8 +65,16 @@ export function BoxColliders({ parts }: BoxCollidersProps) {
         {parts.filter((part) => part.collider !== false).map((part) => (
           <CuboidCollider
             key={part.id}
-            args={[part.size[0] / 2, part.size[1] / 2, part.size[2] / 2]}
-            position={part.position}
+            args={[
+              Math.abs(part.size[0] * colliderScale[0]) / 2,
+              Math.abs(part.size[1] * colliderScale[1]) / 2,
+              Math.abs(part.size[2] * colliderScale[2]) / 2,
+            ]}
+            position={[
+              part.position[0] * colliderScale[0],
+              part.position[1] * colliderScale[1],
+              part.position[2] * colliderScale[2],
+            ]}
             rotation={part.rotation}
           />
         ))}
@@ -94,4 +104,21 @@ function matricesEqual(a: Matrix4, b: Matrix4) {
   }
 
   return true
+}
+
+function setColliderScaleIfChanged(
+  setColliderScale: Dispatch<SetStateAction<[number, number, number]>>,
+  nextScale: [number, number, number],
+) {
+  setColliderScale((currentScale) => {
+    if (
+      Math.abs(currentScale[0] - nextScale[0]) <= 0.000001 &&
+      Math.abs(currentScale[1] - nextScale[1]) <= 0.000001 &&
+      Math.abs(currentScale[2] - nextScale[2]) <= 0.000001
+    ) {
+      return currentScale
+    }
+
+    return nextScale
+  })
 }
