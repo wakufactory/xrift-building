@@ -6,7 +6,17 @@ type BuildingPlacementContextValue = {
   plan: BuildingPlan
 }
 
+export type RoomObjectContextValue = {
+  roomId: string
+}
+
+export type WallObjectContextValue = RoomObjectContextValue & {
+  side: WallSide
+}
+
 const BuildingPlacementContext = createContext<BuildingPlacementContextValue | null>(null)
+const RoomObjectContext = createContext<RoomObjectContextValue | undefined>(undefined)
+const WallObjectContext = createContext<WallObjectContextValue | undefined>(undefined)
 
 export type BuildingPlacementProviderProps = {
   plan: BuildingPlan
@@ -38,6 +48,7 @@ export function RoomObject({
   rotationY,
   children,
 }: RoomObjectProps) {
+  const objectContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
   const transform = useFloorPlacement({
     roomId,
     position,
@@ -46,9 +57,11 @@ export function RoomObject({
   })
 
   return (
-    <group position={transform.position} rotation={transform.rotation}>
-      {children}
-    </group>
+    <RoomObjectContext.Provider value={objectContext}>
+      <group position={transform.position} rotation={transform.rotation}>
+        {children}
+      </group>
+    </RoomObjectContext.Provider>
   )
 }
 
@@ -97,6 +110,8 @@ export function WallObject({
   inset,
   children,
 }: WallObjectProps) {
+  const roomContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
+  const wallContext = useMemo<WallObjectContextValue>(() => ({ roomId, side }), [roomId, side])
   const transform = useWallPlacement({
     roomId,
     side,
@@ -106,9 +121,13 @@ export function WallObject({
   })
 
   return (
-    <group position={transform.position} rotation={transform.rotation}>
-      {children}
-    </group>
+    <RoomObjectContext.Provider value={roomContext}>
+      <WallObjectContext.Provider value={wallContext}>
+        <group position={transform.position} rotation={transform.rotation}>
+          {children}
+        </group>
+      </WallObjectContext.Provider>
+    </RoomObjectContext.Provider>
   )
 }
 
@@ -153,6 +172,14 @@ export function useRoomInfo(roomId: string) {
   const { plan } = useBuildingPlacement()
 
   return useMemo(() => getRoomInfo(plan, roomId), [plan, roomId])
+}
+
+export function useRoomObjectContext() {
+  return useContext(RoomObjectContext)
+}
+
+export function useWallObjectContext() {
+  return useContext(WallObjectContext)
 }
 
 function useBuildingPlacement(): BuildingPlacementContextValue {

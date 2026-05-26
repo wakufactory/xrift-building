@@ -20,14 +20,18 @@ export {
   WallObject,
   useBuildingInfo,
   useFloorPlacement,
+  useRoomObjectContext,
   useRoomInfo,
+  useWallObjectContext,
   useWallPlacement,
 } from './RoomObject'
 export type {
   BuildingPlacementProviderProps,
+  RoomObjectContextValue,
   RoomObjectProps,
   UseFloorPlacementInput,
   UseWallPlacementInput,
+  WallObjectContextValue,
   WallObjectProps,
 } from './RoomObject'
 

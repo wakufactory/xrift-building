@@ -236,6 +236,9 @@ opening の `offset` は壁ローカル座標です。
 - `useBuildingInfo()` / `useRoomInfo(roomId)`
   - `BuildingWorld` 内の任意 component から、親 `BuildingWorld` の plan に基づく建物情報や指定 room 情報を取得します。
   - 返す寸法や境界は placement utility と同じ BuildingWorld ローカル座標です。
+- `useRoomObjectContext()` / `useWallObjectContext()`
+  - `RoomObject` / `WallObject` の children から、親 wrapper の `roomId` や `side` を取得します。
+  - wrapper 外で呼んだ場合は `undefined` を返すため、家具 component 側で明示 props と親 context の fallback を組み合わせられます。
 
 ### `BoxInstance` と `BoxPart`
 
