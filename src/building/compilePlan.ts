@@ -73,6 +73,7 @@ function scalePlanToWorldUnits(plan: BuildingPlan): BuildingPlan {
       ...room,
       position: scaleVec2(room.position, unit),
       size: scaleVec2(room.size, unit),
+      wallThickness: scaleOptional(room.wallThickness, unit),
       doors: room.doors?.map((opening) => scaleOpening(opening, unit, true)),
       windows: room.windows?.map((opening) => scaleOpening(opening, unit, false)),
       floorOpenings: room.floorOpenings?.map((opening) => scaleSlabOpening(opening, unit)),
@@ -405,6 +406,7 @@ function intersectRects(a: Rect2D, b: Rect2D): Rect2D | undefined {
 function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size
+  const wallThickness = room.wallThickness ?? plan.wallThickness
   const floorY = plan.slabThickness / 2
   const ceilingY = plan.floorHeight - plan.slabThickness / 2 - 0.001
   const floorSurface = room.surfaces?.floor
@@ -453,7 +455,7 @@ function compileRoom(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
         side,
         roomCenter: [x, z],
         roomSize: [width, depth],
-        wallThickness: plan.wallThickness,
+        wallThickness,
         bottomY: 0,
         height: plan.floorHeight,
         materialKey: wallSurface.materialKey ?? plan.materialKeys.room.wall,
@@ -779,7 +781,8 @@ function wallPartSize(side: WallSide, length: number, height: number, wallThickn
 function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [x, z] = room.position
   const [width, depth] = room.size
-  const pillarSize = plan.pillar?.thickness ?? plan.wallThickness * 1.4
+  const wallThickness = room.wallThickness ?? plan.wallThickness
+  const pillarSize = plan.pillar?.thickness ?? wallThickness * 1.4
   const pillarHeight = plan.floorHeight
   const y = pillarHeight / 2
 

@@ -18,7 +18,9 @@ export {
   BuildingPlacementProvider,
   RoomObject,
   WallObject,
+  useBuildingInfo,
   useFloorPlacement,
+  useRoomInfo,
   useWallPlacement,
 } from './RoomObject'
 export type {
@@ -32,14 +34,18 @@ export type {
 export { compileBuildingPlan } from './compilePlan'
 
 export {
+  getBuildingInfo,
   getFloorPlacement,
+  getRoomInfo,
   getRoomFloorFrame,
   getRoomWallFrame,
   getWallPlacement,
 } from './placement'
 export type {
+  BuildingInfo,
   FloorPlacementInput,
   PlacementTransform,
+  RoomInfo,
   RoomFloorFrame,
   RoomWallFrame,
   WallPlacementInput,

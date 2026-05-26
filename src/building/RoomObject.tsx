@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { getFloorPlacement, getWallPlacement } from './placement'
+import { getBuildingInfo, getFloorPlacement, getRoomInfo, getWallPlacement } from './placement'
 import type { BuildingPlan, Vec2, WallSide } from './types'
 
 type BuildingPlacementContextValue = {
@@ -141,6 +141,18 @@ export function useWallPlacement({
     }),
     [height, inset, offset, plan, position, roomId, side],
   )
+}
+
+export function useBuildingInfo() {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(() => getBuildingInfo(plan), [plan])
+}
+
+export function useRoomInfo(roomId: string) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(() => getRoomInfo(plan, roomId), [plan, roomId])
 }
 
 function useBuildingPlacement(): BuildingPlacementContextValue {

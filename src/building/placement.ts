@@ -1,5 +1,7 @@
 import type { BuildingPlan, RoomSpec, Vec2, Vec3, WallSide } from './types'
 
+const wallSides: WallSide[] = ['north', 'south', 'east', 'west']
+
 // 家具や装飾を置くための位置と回転を表す。
 export type PlacementTransform = {
   position: Vec3
@@ -45,6 +47,108 @@ export type RoomWallFrame = {
   rotation: Vec3
 }
 
+// plan.unit を反映した建物全体の寸法と基本高さを表す。
+export type BuildingInfo = {
+  plan: BuildingPlan
+  unit: number
+  rooms: RoomSpec[]
+  center: Vec3
+  size: Vec3
+  floorHeight: number
+  wallThickness: number
+  slabThickness: number
+  floorTopY: number
+  ceilingY: number
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+// plan.unit を反映した 1 room の寸法、境界、床・壁 frame を表す。
+export type RoomInfo = {
+  room: RoomSpec
+  id: string
+  position: Vec2
+  size: Vec2
+  width: number
+  depth: number
+  wallThickness: number
+  center: Vec3
+  floorTopY: number
+  ceilingY: number
+  floorFrame: RoomFloorFrame
+  walls: Record<WallSide, RoomWallFrame>
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
+// plan.unit を反映した建物全体の寸法と基本高さを取得する。
+export function getBuildingInfo(plan: BuildingPlan): BuildingInfo {
+  const unit = plan.unit ?? 1
+  const rooms = plan.rooms.map((room) => scaleRoom(room, unit))
+  const bounds = getRoomBounds(rooms)
+  const floorHeight = plan.floorHeight * unit
+  const slabThickness = plan.slabThickness * unit
+  const wallThickness = plan.wallThickness * unit
+  const width = bounds.maxX - bounds.minX
+  const depth = bounds.maxZ - bounds.minZ
+
+  return {
+    plan,
+    unit,
+    rooms,
+    center: [
+      bounds.minX + width / 2,
+      floorHeight / 2,
+      bounds.minZ + depth / 2,
+    ],
+    size: [width, floorHeight, depth],
+    floorHeight,
+    wallThickness,
+    slabThickness,
+    floorTopY: slabThickness,
+    ceilingY: floorHeight - slabThickness,
+    ...bounds,
+  }
+}
+
+// plan.unit を反映した指定 room の寸法、境界、床・壁 frame を取得する。
+export function getRoomInfo(plan: BuildingPlan, roomId: string): RoomInfo {
+  const unit = plan.unit ?? 1
+  const floorFrame = getRoomFloorFrame(plan, roomId)
+  const [width, depth] = floorFrame.size
+  const wallThickness = getEffectiveRoomWallThickness(plan, floorFrame.room, unit)
+  const wallFrames = Object.fromEntries(
+    wallSides.map((side) => [side, getRoomWallFrame(plan, { roomId, side })]),
+  ) as Record<WallSide, RoomWallFrame>
+
+  return {
+    room: floorFrame.room,
+    id: floorFrame.room.id,
+    position: floorFrame.room.position,
+    size: floorFrame.size,
+    width,
+    depth,
+    wallThickness,
+    center: [
+      floorFrame.center[0],
+      (plan.floorHeight * unit) / 2,
+      floorFrame.center[2],
+    ],
+    floorTopY: plan.slabThickness * unit,
+    ceilingY: (plan.floorHeight - plan.slabThickness) * unit,
+    floorFrame,
+    walls: wallFrames,
+    minX: floorFrame.minX,
+    maxX: floorFrame.maxX,
+    minZ: floorFrame.minZ,
+    maxZ: floorFrame.maxZ,
+  }
+}
+
 // 指定 room の床面中心と境界を取得する。
 export function getRoomFloorFrame(plan: BuildingPlan, roomId: string): RoomFloorFrame {
   const unit = plan.unit ?? 1
@@ -72,7 +176,7 @@ export function getRoomWallFrame(plan: BuildingPlan, input: Pick<WallPlacementIn
   const room = scaleRoom(sourceRoom, unit)
   const [x, z] = room.position
   const [width, depth] = room.size
-  const wallThickness = plan.wallThickness * unit
+  const wallThickness = getEffectiveRoomWallThickness(plan, room, unit)
   const centerY = plan.floorHeight * unit / 2
 
   switch (input.side) {
@@ -153,6 +257,32 @@ export function getWallPlacement(plan: BuildingPlan, input: WallPlacementInput):
   }
 }
 
+function getRoomBounds(rooms: RoomSpec[]) {
+  if (rooms.length === 0) {
+    return { minX: 0, maxX: 0, minZ: 0, maxZ: 0 }
+  }
+
+  return rooms.reduce(
+    (bounds, room) => {
+      const [x, z] = room.position
+      const [width, depth] = room.size
+
+      return {
+        minX: Math.min(bounds.minX, x - width / 2),
+        maxX: Math.max(bounds.maxX, x + width / 2),
+        minZ: Math.min(bounds.minZ, z - depth / 2),
+        maxZ: Math.max(bounds.maxZ, z + depth / 2),
+      }
+    },
+    {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minZ: Number.POSITIVE_INFINITY,
+      maxZ: Number.NEGATIVE_INFINITY,
+    },
+  )
+}
+
 // plan 内から指定 ID の room を取得する。
 function getRoom(plan: BuildingPlan, roomId: string): RoomSpec {
   const room = plan.rooms.find((candidate) => candidate.id === roomId)
@@ -174,7 +304,16 @@ function scaleRoom(room: RoomSpec, unit: number): RoomSpec {
     ...room,
     position: scaleVec2(room.position, unit),
     size: scaleVec2(room.size, unit),
+    wallThickness: scaleOptional(room.wallThickness, unit),
   }
+}
+
+function getEffectiveRoomWallThickness(plan: BuildingPlan, room: RoomSpec, unit: number): number {
+  return room.wallThickness ?? plan.wallThickness * unit
+}
+
+function scaleOptional(value: number | undefined, unit: number): number | undefined {
+  return value === undefined ? undefined : value * unit
 }
 
 // Vec2 を指定倍率でスケールする。

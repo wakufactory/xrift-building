@@ -116,7 +116,7 @@ xrift-building-world/
 - `rooms: RoomSpec[]`
   - 部屋の配列です。
 
-`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `roof.overhang`, `roof.thickness`, `roof.heightOffset`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, opening の `offset`, `width`, `height`, `bottom`, 床/天井/屋根開口の `position`, `size` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
+`unit` の対象は、`floorHeight`, `wallThickness`, `slabThickness`, `pillar.thickness`, `roof.overhang`, `roof.thickness`, `roof.heightOffset`, `exteriorGround.margin`, `exteriorGround.thickness`, `room.position`, `room.size`, `room.wallThickness`, opening の `offset`, `width`, `height`, `bottom`, 床/天井/屋根開口の `position`, `size` です。door/window のデフォルト `height` と `bottom` も `unit` でスケールされます。
 
 ### `RoomSpec`
 
@@ -129,6 +129,9 @@ xrift-building-world/
   - XZ 平面上の部屋中心です。
 - `size: [number, number]`
   - X 方向の幅と Z 方向の奥行きです。
+- `wallThickness?: number`
+  - この room の壁 box の厚みを上書きします。
+  - 未指定時は `BuildingPlan.wallThickness` を使います。
 - `surfaces?: RoomSurfaces`
   - 床、壁、天井、個別壁の見た目や collider を上書きします。
 - `doors?: OpeningSpec[]`
@@ -219,6 +222,10 @@ opening の `offset` は壁ローカル座標です。
   - 返す `rotation` は object の local `+Z` が部屋内側を向く向きです。
 - `getRoomFloorFrame()` / `getRoomWallFrame()`
   - 配置可能範囲、壁の接線、室内向き法線など、より低レベルな frame 情報を返します。
+- `getBuildingInfo(plan)`
+  - `plan.unit` を反映した建物全体の `center` / `size` / `minX` / `maxX` / `minZ` / `maxZ`、`floorHeight`、`wallThickness`、`slabThickness`、`floorTopY`、`ceilingY`、およびスケール済み `rooms` を返します。
+- `getRoomInfo(plan, roomId)`
+  - 指定 room の `position` / `size` / `width` / `depth` / `wallThickness` / `center`、境界、`floorFrame`、4 方向の `walls` frame を返します。
 - `RoomObject` / `WallObject`
   - `BuildingWorld` 内で children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
   - plan は `BuildingWorld` が `BuildingPlacementProvider` で context として渡します。
@@ -226,6 +233,9 @@ opening の `offset` は壁ローカル座標です。
 - `useFloorPlacement()` / `useWallPlacement()`
   - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
   - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
+- `useBuildingInfo()` / `useRoomInfo(roomId)`
+  - `BuildingWorld` 内の任意 component から、親 `BuildingWorld` の plan に基づく建物情報や指定 room 情報を取得します。
+  - 返す寸法や境界は placement utility と同じ BuildingWorld ローカル座標です。
 
 ### `BoxInstance` と `BoxPart`
 
