@@ -69,6 +69,7 @@ xrift-building-world/
     dev.tsx
     index.tsx
     building/
+      index.ts
       Building.tsx
       BuildingWorld.tsx
       RoomObject.tsx
@@ -370,7 +371,7 @@ console.log('[building profile]', source, {
 
 - `World`, `WorldProps`
 
-building API は package root からは export しません。`World.tsx` 内や補完用 world で使う場合は、必要な component / utility を `src/building/...` から直接 import します。
+building API は package root からは export しません。`World.tsx` 内や補完用 world で使う場合は、必要な component / utility を `src/building/index.ts` 経由で import します。
 
 現状、`plan1`, `plan2`, `Buildings()` は `src/worldPlan.tsx` からは export されていますが、package の `src/index.tsx` からは export されていません。
 

@@ -1,14 +1,11 @@
 import { useRef } from 'react'
 import { useFrame} from '@react-three/fiber'
+import { Text } from '@react-three/drei'
 import { Mesh } from 'three'
 import { RigidBody} from '@react-three/rapier'
-import type { BuildingPlan,BoxInstance,Vec3 } from './building/types'
-import { BuildingWorld } from './building/BuildingWorld'
 import { worldBuildingMaterials } from './worldMaterials'
-import { BoxBatchProvider, BoxLayer } from './building/InstancedBoxLayer'
-import { RoomObject, WallObject } from './building/RoomObject'
-import { Vec2,BoxPartColor} from './building/types.ts'
-import { Text } from '@react-three/drei'
+import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject } from './building'
+import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2, Vec3 } from './building'
 
 /// north -z east +x south +z west x
 
@@ -59,9 +56,9 @@ export const plan1: BuildingPlan = {
         { side: 'east', offset: 2.7, width: 2.1, height: 2.25 },
       ],
       windows: [
-        { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.1 },
-        { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1.1 },
-        { side: 'south', offset: -0, width: 5, bottom: 1.1, height: 2 },
+        { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.},
+        { side: 'west', offset: -2.5, width: 1.5, bottom: 1, height: 1. },
+        { side: 'south', offset: -0, width: 5, bottom: 1., height: 2 },
       ],
       ceilingOpenings: [
         { position: [-2.5, -3], size: [2, 2] },

@@ -9,7 +9,7 @@ plan を編集する主なファイルは `src/worldPlan.tsx` です。material 
 `BuildingPlan` は建物全体の設定と、部屋の配列でできています。
 
 ```ts
-import type { BuildingPlan } from './building/types'
+import type { BuildingPlan } from './building'
 
 export const myPlan: BuildingPlan = {
   unit: 1,
@@ -76,7 +76,7 @@ roof: {
 この plan を表示するには `BuildingWorld` に渡します。
 
 ```tsx
-import { BuildingWorld } from './building/BuildingWorld'
+import { BuildingWorld } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
 
 <BuildingWorld
@@ -256,7 +256,7 @@ surfaces: {
 床や壁を基準に家具、額、照明などを置く場合は `getFloorPlacement()` と `getWallPlacement()` を使います。どちらも plan の `unit` を反映した `position` / `rotation` を返します。
 
 ```tsx
-import { getFloorPlacement, getWallPlacement } from './building/placement'
+import { getFloorPlacement, getWallPlacement } from './building'
 
 const sofa = getFloorPlacement(plan1, {
   roomId: '2-gallery',
@@ -287,8 +287,7 @@ const frame = getWallPlacement(plan1, {
 children を直接囲んで配置したい場合は `RoomObject` / `WallObject` を使います。
 
 ```tsx
-import { BuildingWorld } from './building/BuildingWorld'
-import { RoomObject, WallObject } from './building/RoomObject'
+import { BuildingWorld, RoomObject, WallObject } from './building'
 
 <BuildingWorld plan={plan1} materials={worldBuildingMaterials}>
   <RoomObject roomId="2-gallery" position={[-2, 1]} height={0.35} rotationY={Math.PI / 2}>
@@ -306,7 +305,7 @@ import { RoomObject, WallObject } from './building/RoomObject'
 component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useWallPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
 
 ```tsx
-import { useWallPlacement } from './building/RoomObject'
+import { useWallPlacement } from './building'
 
 function PictureFrame() {
   const frame = useWallPlacement({
@@ -397,7 +396,7 @@ material key が catalog に存在しない場合は、ピンク色の fallback 
 `BoxBatchProvider` の配下に置くと、複数の `BuildingWorld` と直接置いた `BoxLayer` がまとめて描画されます。描画は material key ごとに 1 つの `InstancedMesh` になり、`source` でどの `BuildingWorld` / `BoxLayer` 由来かを区別できます。
 
 ```tsx
-import { BoxBatchProvider, BoxLayer, type BoxInstance } from '@xrift/building-world'
+import { BoxBatchProvider, BoxLayer, type BoxInstance } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
 
 const furniture: BoxInstance[] = [

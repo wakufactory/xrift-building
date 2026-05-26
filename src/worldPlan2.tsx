@@ -1,10 +1,8 @@
 // this plan is AI generated
 
 import { RigidBody } from '@react-three/rapier'
-import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2,Vec3} from './building/types'
-import { BuildingWorld } from './building/BuildingWorld'
-import { BoxBatchProvider, BoxLayer } from './building/InstancedBoxLayer'
-import { RoomObject, WallObject } from './building/RoomObject'
+import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject } from './building'
+import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2, Vec3 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
 import { Text } from '@react-three/drei'
 
