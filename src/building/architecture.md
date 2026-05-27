@@ -319,7 +319,7 @@ opening の `offset` は壁ローカル座標です。
 
 `compileRoomTrim()` は部屋の 4 隅に `pillar` box を生成します。
 
-- 高さは `plan.floorHeight` です。
+- 高さは z-fighting を避けるため、上端だけ `0.001` はみ出す `plan.floorHeight + 0.001` です。
 - 太さは `plan.pillar?.thickness ?? plan.wallThickness * 1.4` です。
 - material key は `plan.materialKeys.pillar` です。
 

@@ -783,7 +783,7 @@ function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const [width, depth] = room.size
   const wallThickness = room.wallThickness ?? plan.wallThickness
   const pillarSize = plan.pillar?.thickness ?? wallThickness * 1.4
-  const pillarHeight = plan.floorHeight
+  const pillarHeight = plan.floorHeight + 0.001
   const y = pillarHeight / 2
 
   // 角柱は装飾であり、衝突境界を分かりやすくする役割も持つ。隣接部屋
