@@ -16,9 +16,11 @@ export type {
 
 export {
   BuildingPlacementProvider,
+  CeilingObject,
   RoomObject,
   WallObject,
   useBuildingInfo,
+  useCeilingPlacement,
   useFloorPlacement,
   useRoomObjectContext,
   useRoomInfo,
@@ -27,8 +29,10 @@ export {
 } from './RoomObject'
 export type {
   BuildingPlacementProviderProps,
+  CeilingObjectProps,
   RoomObjectContextValue,
   RoomObjectProps,
+  UseCeilingPlacementInput,
   UseFloorPlacementInput,
   UseWallPlacementInput,
   WallObjectContextValue,
@@ -39,16 +43,20 @@ export { compileBuildingPlan } from './compilePlan'
 
 export {
   getBuildingInfo,
+  getCeilingPlacement,
   getFloorPlacement,
   getRoomInfo,
+  getRoomCeilingFrame,
   getRoomFloorFrame,
   getRoomWallFrame,
   getWallPlacement,
 } from './placement'
 export type {
   BuildingInfo,
+  CeilingPlacementInput,
   FloorPlacementInput,
   PlacementTransform,
+  RoomCeilingFrame,
   RoomInfo,
   RoomFloorFrame,
   RoomWallFrame,

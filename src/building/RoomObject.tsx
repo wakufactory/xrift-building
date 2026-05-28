@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { getBuildingInfo, getFloorPlacement, getRoomInfo, getWallPlacement } from './placement'
+import { getBuildingInfo, getCeilingPlacement, getFloorPlacement, getRoomInfo, getWallPlacement } from './placement'
 import type { BuildingPlan, Vec2, WallSide } from './types'
 
 type BuildingPlacementContextValue = {
@@ -65,6 +65,32 @@ export function RoomObject({
   )
 }
 
+export type CeilingObjectProps = RoomObjectProps
+
+export function CeilingObject({
+  roomId,
+  position,
+  height,
+  rotationY,
+  children,
+}: CeilingObjectProps) {
+  const objectContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
+  const transform = useCeilingPlacement({
+    roomId,
+    position,
+    height,
+    rotationY,
+  })
+
+  return (
+    <RoomObjectContext.Provider value={objectContext}>
+      <group position={transform.position} rotation={transform.rotation}>
+        {children}
+      </group>
+    </RoomObjectContext.Provider>
+  )
+}
+
 export type UseFloorPlacementInput = {
   roomId: string
   position?: Vec2
@@ -82,6 +108,27 @@ export function useFloorPlacement({
 
   return useMemo(
     () => getFloorPlacement(plan, {
+      roomId,
+      offset: position,
+      height,
+      rotationY,
+    }),
+    [height, plan, position, roomId, rotationY],
+  )
+}
+
+export type UseCeilingPlacementInput = UseFloorPlacementInput
+
+export function useCeilingPlacement({
+  roomId,
+  position,
+  height,
+  rotationY,
+}: UseCeilingPlacementInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => getCeilingPlacement(plan, {
       roomId,
       offset: position,
       height,
@@ -186,7 +233,7 @@ function useBuildingPlacement(): BuildingPlacementContextValue {
   const context = useContext(BuildingPlacementContext)
 
   if (!context) {
-    throw new Error('RoomObject and WallObject must be rendered inside BuildingWorld.')
+    throw new Error('RoomObject, CeilingObject, and WallObject must be rendered inside BuildingWorld.')
   }
 
   return context

@@ -209,28 +209,32 @@ opening の `offset` は壁ローカル座標です。
 
 ### インテリア配置 utility
 
-`src/building/placement.ts` は、plan 作者が家具や壁掛け object を room の床・壁ローカル座標で置くための補助関数です。`compileBuildingPlan()` とは独立しており、任意の React Three Fiber object や `BoxLayer` 用の `BoxInstance` 作成に使えます。
+`src/building/placement.ts` は、plan 作者が家具や照明や壁掛け object を room の床・天井・壁ローカル座標で置くための補助関数です。`compileBuildingPlan()` とは独立しており、任意の React Three Fiber object や `BoxLayer` 用の `BoxInstance` 作成に使えます。
 
 - `getFloorPlacement(plan, { roomId, offset, height, rotationY })`
   - `offset` は部屋中心からの `[x, z]` です。
   - `height` は床 slab 上面からの高さです。
   - plan の `unit` を反映した `position` と `[0, rotationY, 0]` を返します。
+- `getCeilingPlacement(plan, { roomId, offset, height, rotationY })`
+  - `offset` は部屋中心からの `[x, z]` です。
+  - `height` は天井 slab 下面から下方向への距離です。
+  - plan の `unit` と、天井 slab の z-fighting 回避オフセット `0.001` を反映した `position` と `[0, rotationY, 0]` を返します。
 - `getWallPlacement(plan, { roomId, side, offset, height, inset })`
   - `offset` は door/window と同じ壁ローカル座標です。
   - `height` は従来通り壁の下端からの高さです。
   - `inset` は壁の室内面から部屋内側へずらす距離です。
   - 返す `rotation` は object の local `+Z` が部屋内側を向く向きです。
-- `getRoomFloorFrame()` / `getRoomWallFrame()`
+- `getRoomFloorFrame()` / `getRoomCeilingFrame()` / `getRoomWallFrame()`
   - 配置可能範囲、壁の接線、室内向き法線など、より低レベルな frame 情報を返します。
 - `getBuildingInfo(plan)`
-  - `plan.unit` を反映した建物全体の `center` / `size` / `minX` / `maxX` / `minZ` / `maxZ`、`floorHeight`、`wallThickness`、`slabThickness`、`floorTopY`、`ceilingY`、およびスケール済み `rooms` を返します。
+  - `plan.unit` を反映した建物全体の `center` / `size` / `minX` / `maxX` / `minZ` / `maxZ`、`floorHeight`、`wallThickness`、`slabThickness`、`floorTopY`、`ceilingY`、`ceilingBottomY`、およびスケール済み `rooms` を返します。
 - `getRoomInfo(plan, roomId)`
-  - 指定 room の `position` / `size` / `width` / `depth` / `wallThickness` / `center`、境界、`floorFrame`、4 方向の `walls` frame を返します。
-- `RoomObject` / `WallObject`
+  - 指定 room の `position` / `size` / `width` / `depth` / `wallThickness` / `center`、境界、`floorFrame`、`ceilingFrame`、4 方向の `walls` frame を返します。
+- `RoomObject` / `CeilingObject` / `WallObject`
   - `BuildingWorld` 内で children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
   - plan は `BuildingWorld` が `BuildingPlacementProvider` で context として渡します。
-  - `RoomObject.position` は部屋中心からの床ローカル `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
-- `useFloorPlacement()` / `useWallPlacement()`
+  - `RoomObject.position` と `CeilingObject.position` は部屋中心からの `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
+- `useFloorPlacement()` / `useCeilingPlacement()` / `useWallPlacement()`
   - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
   - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
 - `useBuildingInfo()` / `useRoomInfo(roomId)`

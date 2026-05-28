@@ -253,16 +253,22 @@ surfaces: {
 
 ## インテリア object の配置
 
-床や壁を基準に家具、額、照明などを置く場合は `getFloorPlacement()` と `getWallPlacement()` を使います。どちらも plan の `unit` を反映した `position` / `rotation` を返します。
+床、天井、壁を基準に家具、額、照明などを置く場合は `getFloorPlacement()`、`getCeilingPlacement()`、`getWallPlacement()` を使います。どれも plan の `unit` を反映した `position` / `rotation` を返します。
 
 ```tsx
-import { getFloorPlacement, getWallPlacement } from './building'
+import { getCeilingPlacement, getFloorPlacement, getWallPlacement } from './building'
 
 const sofa = getFloorPlacement(plan1, {
   roomId: '2-gallery',
   offset: [-2, 1],
   height: 0.35,
   rotationY: Math.PI / 2,
+})
+
+const lamp = getCeilingPlacement(plan1, {
+  roomId: '2-gallery',
+  offset: [0, 1],
+  height: 0.2,
 })
 
 const frame = getWallPlacement(plan1, {
@@ -277,22 +283,30 @@ const frame = getWallPlacement(plan1, {
   {/* sofa mesh */}
 </group>
 
+<group position={lamp.position} rotation={lamp.rotation}>
+  {/* ceiling-mounted mesh */}
+</group>
+
 <group position={frame.position} rotation={frame.rotation}>
   {/* wall-mounted mesh. local +Z faces into the room. */}
 </group>
 ```
 
-床の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。床配置の `height` は床 slab 上面からの高さ、壁配置の `height` は従来通り壁の下端からの高さです。`inset` は壁の室内面から部屋内側へずらす距離です。
+床と天井の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。床配置の `height` は床 slab 上面からの高さ、天井配置の `height` は天井 slab 下面から下方向への距離、壁配置の `height` は従来通り壁の下端からの高さです。`inset` は壁の室内面から部屋内側へずらす距離です。
 
-children を直接囲んで配置したい場合は `RoomObject` / `WallObject` を使います。
+children を直接囲んで配置したい場合は `RoomObject` / `CeilingObject` / `WallObject` を使います。
 
 ```tsx
-import { BuildingWorld, RoomObject, WallObject } from './building'
+import { BuildingWorld, CeilingObject, RoomObject, WallObject } from './building'
 
 <BuildingWorld plan={plan1} materials={worldBuildingMaterials}>
   <RoomObject roomId="2-gallery" position={[-2, 1]} height={0.35} rotationY={Math.PI / 2}>
     {/* sofa mesh */}
   </RoomObject>
+
+  <CeilingObject roomId="2-gallery" position={[0, 1]} height={0.2}>
+    {/* ceiling-mounted mesh */}
+  </CeilingObject>
 
   <WallObject roomId="2-gallery" side="north" offset={2} height={1.6} inset={0.04}>
     {/* wall-mounted mesh. local +Z faces into the room. */}
@@ -300,9 +314,9 @@ import { BuildingWorld, RoomObject, WallObject } from './building'
 </BuildingWorld>
 ```
 
-`RoomObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` の `position` は部屋中心からの床ローカル `[x, z]` です。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。
+`RoomObject` / `CeilingObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` と `CeilingObject` の `position` は部屋中心からの `[x, z]` です。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。
 
-component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useWallPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
+component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useCeilingPlacement()` / `useWallPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
 
 ```tsx
 import { useWallPlacement } from './building'

@@ -1,6 +1,7 @@
 import type { BuildingPlan, RoomSpec, Vec2, Vec3, WallSide } from './types'
 
 const wallSides: WallSide[] = ['north', 'south', 'east', 'west']
+const CEILING_Z_FIGHT_OFFSET = 0.001
 
 // 家具や装飾を置くための位置と回転を表す。
 export type PlacementTransform = {
@@ -15,6 +16,9 @@ export type FloorPlacementInput = {
   height?: number
   rotationY?: number
 }
+
+// 部屋の天井基準で配置を計算するための入力を表す。
+export type CeilingPlacementInput = FloorPlacementInput
 
 // 部屋の壁基準で配置を計算するための入力を表す。
 export type WallPlacementInput = {
@@ -35,6 +39,9 @@ export type RoomFloorFrame = {
   minZ: number
   maxZ: number
 }
+
+// 部屋の天井面フレームと境界を表す。
+export type RoomCeilingFrame = RoomFloorFrame
 
 // 部屋の壁面フレーム、接線、内向き法線を表す。
 export type RoomWallFrame = {
@@ -59,6 +66,7 @@ export type BuildingInfo = {
   slabThickness: number
   floorTopY: number
   ceilingY: number
+  ceilingBottomY: number
   minX: number
   maxX: number
   minZ: number
@@ -77,7 +85,9 @@ export type RoomInfo = {
   center: Vec3
   floorTopY: number
   ceilingY: number
+  ceilingBottomY: number
   floorFrame: RoomFloorFrame
+  ceilingFrame: RoomCeilingFrame
   walls: Record<WallSide, RoomWallFrame>
   minX: number
   maxX: number
@@ -111,6 +121,7 @@ export function getBuildingInfo(plan: BuildingPlan): BuildingInfo {
     slabThickness,
     floorTopY: slabThickness,
     ceilingY: floorHeight - slabThickness,
+    ceilingBottomY: floorHeight - slabThickness - CEILING_Z_FIGHT_OFFSET,
     ...bounds,
   }
 }
@@ -119,6 +130,7 @@ export function getBuildingInfo(plan: BuildingPlan): BuildingInfo {
 export function getRoomInfo(plan: BuildingPlan, roomId: string): RoomInfo {
   const unit = plan.unit ?? 1
   const floorFrame = getRoomFloorFrame(plan, roomId)
+  const ceilingFrame = getRoomCeilingFrame(plan, roomId)
   const [width, depth] = floorFrame.size
   const wallThickness = getEffectiveRoomWallThickness(plan, floorFrame.room, unit)
   const wallFrames = Object.fromEntries(
@@ -140,7 +152,9 @@ export function getRoomInfo(plan: BuildingPlan, roomId: string): RoomInfo {
     ],
     floorTopY: plan.slabThickness * unit,
     ceilingY: (plan.floorHeight - plan.slabThickness) * unit,
+    ceilingBottomY: ceilingFrame.center[1],
     floorFrame,
+    ceilingFrame,
     walls: wallFrames,
     minX: floorFrame.minX,
     maxX: floorFrame.maxX,
@@ -161,6 +175,26 @@ export function getRoomFloorFrame(plan: BuildingPlan, roomId: string): RoomFloor
   return {
     room,
     center: [x, floorTopY, z],
+    size: [width, depth],
+    minX: x - width / 2,
+    maxX: x + width / 2,
+    minZ: z - depth / 2,
+    maxZ: z + depth / 2,
+  }
+}
+
+// 指定 room の天井面中心と境界を取得する。
+export function getRoomCeilingFrame(plan: BuildingPlan, roomId: string): RoomCeilingFrame {
+  const unit = plan.unit ?? 1
+  const sourceRoom = getRoom(plan, roomId)
+  const room = scaleRoom(sourceRoom, unit)
+  const [x, z] = room.position
+  const [width, depth] = room.size
+  const ceilingBottomY = (plan.floorHeight - plan.slabThickness) * unit - CEILING_Z_FIGHT_OFFSET
+
+  return {
+    room,
+    center: [x, ceilingBottomY, z],
     size: [width, depth],
     minX: x - width / 2,
     maxX: x + width / 2,
@@ -233,6 +267,22 @@ export function getFloorPlacement(plan: BuildingPlan, input: FloorPlacementInput
     position: [
       frame.center[0] + offsetX * unit,
       frame.center[1] + (input.height ?? 0) * unit,
+      frame.center[2] + offsetZ * unit,
+    ],
+    rotation: [0, input.rotationY ?? 0, 0],
+  }
+}
+
+// 天井面基準の offset と下方向距離から world 配置を計算する。
+export function getCeilingPlacement(plan: BuildingPlan, input: CeilingPlacementInput): PlacementTransform {
+  const unit = plan.unit ?? 1
+  const frame = getRoomCeilingFrame(plan, input.roomId)
+  const [offsetX, offsetZ] = input.offset ?? [0, 0]
+
+  return {
+    position: [
+      frame.center[0] + offsetX * unit,
+      frame.center[1] - (input.height ?? 0) * unit,
       frame.center[2] + offsetZ * unit,
     ],
     rotation: [0, input.rotationY ?? 0, 0],
