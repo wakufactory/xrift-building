@@ -22,6 +22,7 @@ export type InstancedBoxLayerProps = BoxLayerProps
 // BoxBatchProvider に渡す children を表す。
 export type BoxBatchProviderProps = {
   children: ReactNode
+  deferInitialRender?: boolean
 }
 
 // Provider に登録される 1 つの BoxLayer の描画情報を表す。
@@ -43,9 +44,10 @@ const unitBoxGeometry = createUnitBoxGeometry()
 const BoxBatchContext = createContext<BoxBatchContextValue | null>(null)
 
 // 配下の BoxLayer を集約し、material key ごとにまとめて描画する。
-export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
+export function BoxBatchProvider({ children, deferInitialRender = true }: BoxBatchProviderProps) {
   const groupRef = useRef<Group>(null)
   const [entries, setEntries] = useState<BoxBatchEntry[]>([])
+  const [initialRenderReady, setInitialRenderReady] = useState(!deferInitialRender)
   const register = useCallback((entry: BoxBatchEntry) => {
     setEntries((current) => {
       const existing = current.find((item) => item.id === entry.id)
@@ -72,9 +74,14 @@ export function BoxBatchProvider({ children }: BoxBatchProviderProps) {
     [getProviderMatrixWorld, register],
   )
 
+  useLayoutEffect(() => {
+    if (!deferInitialRender || initialRenderReady) return
+    setInitialRenderReady(true)
+  }, [deferInitialRender, initialRenderReady])
+
   return (
     <BoxBatchContext.Provider value={contextValue}>
-      <group ref={groupRef}>
+      <group ref={groupRef} visible={initialRenderReady}>
         {children}
         <BoxLayerRenderer {...mergeBatchEntries(entries)} />
       </group>
