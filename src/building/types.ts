@@ -90,6 +90,7 @@ export type RoomSurfaces = {
 
 // 壁に開けるドア・窓などの矩形開口を表す。
 export type OpeningSpec = {
+  id?: string
   side: WallSide
   offset: number
   width: number
@@ -99,6 +100,7 @@ export type OpeningSpec = {
 
 // 床・天井・屋根 slab に開ける、部屋中心基準の矩形開口を表す。
 export type SlabOpeningSpec = {
+  id?: string
   position: Vec2
   size: Vec2
 }
