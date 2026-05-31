@@ -2,6 +2,16 @@
 
 `xrift-building-world` は、コードで書いた `BuildingPlan` から XRift 用の建物を生成する world です。部屋、ドア、窓、面ごとの色や material を plan として書くと、内部で box の instance 描画と Rapier collider に変換されます。
 
+コンセプト的には、部屋のサイズを指定するだけで、壁や床を作ってくれて、窓やドアは相対座標で穴を開ける、というのがコード的に手軽にできるというものです。
+
+BuildingPlanは建物構造とコライダーだけ作って、インテリアや装飾は別途componentを配置するという方針になります。
+
+XRiftのテンプレートとしてワールドを作成する場合は、
+```
+xrift create  world -t wakufactory/xrift-building-template
+```
+で始められます。
+
 plan を編集する主なファイルは `src/worldPlan.tsx` です。material の一覧は `src/worldMaterials.ts` にあります。
 
 ## plan の基本
@@ -53,40 +63,6 @@ export const myPlan: BuildingPlan = {
   ],
 }
 ```
-
-## 屋根
-
-`roof` を指定すると、plan 内の room 形状に合わせて平面屋根を生成します。L 字や張り出しのある平面では、最大外接矩形ではなく部屋矩形の合成範囲だけを非重複の矩形 roof に分割します。
-
-```ts
-roof: {
-  overhang: 0.35,
-  thickness: 0.16,
-  heightOffset: 0,
-  materialKey: 'roof:flat-concrete',
-}
-```
-
-- `overhang` は各 room 矩形から外側へ張り出す量です。
-- `thickness` は屋根 slab の厚みです。省略時は `slabThickness` を使います。
-- `heightOffset` は `floorHeight` を基準に屋根位置を上下へずらす量です。`0` のとき屋根の中心が建物高さの上端に乗り、厚みの半分が上へはみ出します。正の値で上、負の値で下に移動します。
-- `materialKey` を省略すると `materialKeys.roof`、それもなければ `materialKeys.room.ceiling` を使います。
-- `roof: false` または未指定なら屋根は生成しません。
-
-この plan を表示するには `BuildingWorld` に渡します。
-
-```tsx
-import { BuildingWorld } from './building'
-import { worldBuildingMaterials } from './worldMaterials'
-
-<BuildingWorld
-  plan={myPlan}
-  materials={worldBuildingMaterials}
-  position={[0, 0, 0]}
-/>
-```
-
-現在の `src/worldPlan.tsx` では `plan1` と `plan2` を作り、`Buildings()` の中で 2 つの `BuildingWorld` を別々の高さに配置しています。
 
 ## 座標と向き
 
@@ -163,7 +139,7 @@ rooms: [
 
 ```ts
 doors: [
-  { side: 'south', offset: 0, width: 1.6, height: 2.2 },
+  { id: 'entrance', side: 'south', offset: 0, width: 1.6, height: 2.2 },
 ],
 windows: [
   { side: 'north', offset: -1.5, width: 1.2, bottom: 1.0, height: 1.1 },
@@ -177,7 +153,7 @@ windows: [
 | door | `0` | `2.15` |
 | window | `1.05` | `1.05` |
 
-`width` と `offset` は必須です。開口が壁の外にはみ出す場合、壁と重なる範囲だけが引かれます。
+`width` と `offset` は必須です。`id` は任意で、未指定の場合は door/window それぞれの配列 index を文字列にした ID として配置 utility から参照できます。開口が壁の外にはみ出す場合、壁と重なる範囲だけが引かれます。
 
 ## 床・天井・屋根の開口
 
@@ -185,7 +161,7 @@ windows: [
 
 ```ts
 ceilingOpenings: [
-  { position: [0, 1], size: [2, 2] },
+  { id: 'atrium-hole', position: [0, 1], size: [2, 2] },
 ],
 floorOpenings: [
   { position: [0, 1], size: [2, 2] },
@@ -195,7 +171,7 @@ roofOpenings: [
 ],
 ```
 
-床と天井の開口が部屋の外にはみ出す場合、部屋と重なる範囲だけが引かれます。屋根の開口は room 基準の位置で roof だけから引かれ、`overhang` 部分も含む屋根形状との重なりだけが抜かれます。床、天井、屋根の開口は互いに独立しており、壁の `doors` / `windows` には影響しません。
+`id` は任意で、未指定の場合は対象配列の index を文字列にした ID として配置 utility から参照できます。床と天井の開口が部屋の外にはみ出す場合、部屋と重なる範囲だけが引かれます。屋根の開口は room 基準の位置で roof だけから引かれ、`overhang` 部分も含む屋根形状との重なりだけが抜かれます。床、天井、屋根の開口は互いに独立しており、壁の `doors` / `windows` には影響しません。
 
 ## 面の色と material
 
@@ -253,10 +229,10 @@ surfaces: {
 
 ## インテリア object の配置
 
-床、天井、壁を基準に家具、額、照明などを置く場合は `getFloorPlacement()`、`getCeilingPlacement()`、`getWallPlacement()` を使います。どれも plan の `unit` を反映した `position` / `rotation` を返します。
+床、天井、天井開口、壁、door/window 開口を基準に家具、額、照明などを置く場合は `getFloorPlacement()`、`getCeilingPlacement()`、`getCeilingOpeningPlacement()`、`getWallPlacement()`、`getWallOpeningPlacement()` を使います。どれも plan の `unit` を反映した `position` / `rotation` を返します。
 
 ```tsx
-import { getCeilingPlacement, getFloorPlacement, getWallPlacement } from './building'
+import { getCeilingOpeningPlacement, getCeilingPlacement, getFloorPlacement, getWallOpeningPlacement, getWallPlacement } from './building'
 
 const sofa = getFloorPlacement(plan1, {
   roomId: '2-gallery',
@@ -271,11 +247,24 @@ const lamp = getCeilingPlacement(plan1, {
   height: 0.2,
 })
 
+const ceilingHole = getCeilingOpeningPlacement(plan1, {
+  roomId: '2-gallery',
+  id: 'atrium-hole',
+  inset: 0.04,
+})
+
 const frame = getWallPlacement(plan1, {
   roomId: '2-gallery',
   side: 'north',
   offset: 2,
   height: 1.6,
+  inset: 0.04,
+})
+
+const windowCenter = getWallOpeningPlacement(plan1, {
+  roomId: '2-gallery',
+  kind: 'window',
+  id: '0',
   inset: 0.04,
 })
 
@@ -287,12 +276,20 @@ const frame = getWallPlacement(plan1, {
   {/* ceiling-mounted mesh */}
 </group>
 
+<group position={ceilingHole.position} rotation={ceilingHole.rotation}>
+  {/* mesh aligned to the ceiling opening center */}
+</group>
+
 <group position={frame.position} rotation={frame.rotation}>
   {/* wall-mounted mesh. local +Z faces into the room. */}
 </group>
+
+<group position={windowCenter.position} rotation={windowCenter.rotation}>
+  {/* mesh aligned to the window opening center */}
+</group>
 ```
 
-床と天井の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。床配置の `height` は床 slab 上面からの高さ、天井配置の `height` は天井 slab 下面から下方向への距離、壁配置の `height` は従来通り壁の下端からの高さです。`inset` は壁の室内面から部屋内側へずらす距離です。
+床と天井の `offset` は部屋中心からの `[x, z]` です。壁の `offset` はドアや窓と同じ壁ローカル座標で、`north` / `south` では `+X`、`east` / `west` では north 方向、つまり `-Z` が正です。床配置の `height` は床 slab 上面からの高さ、天井配置の `height` は天井 slab 下面から下方向への距離、壁配置の `height` は従来通り壁の下端からの高さです。壁開口の `inset` は壁の室内面から部屋内側へ、天井開口の `inset` は天井 slab 下面から下方向へずらす距離です。door/window や ceiling opening の `id` が未指定の場合は、対象配列の index を文字列にした ID で参照できます。
 
 children を直接囲んで配置したい場合は `RoomObject` / `CeilingObject` / `WallObject` を使います。
 
@@ -316,7 +313,7 @@ import { BuildingWorld, CeilingObject, RoomObject, WallObject } from './building
 
 `RoomObject` / `CeilingObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` と `CeilingObject` の `position` は部屋中心からの `[x, z]` です。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。
 
-component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useCeilingPlacement()` / `useWallPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
+component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useWallPlacement()` / `useWallOpeningPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
 
 ```tsx
 import { useWallPlacement } from './building'
@@ -333,6 +330,40 @@ function PictureFrame() {
   return <group position={frame.position} rotation={frame.rotation}>{/* mesh */}</group>
 }
 ```
+
+## 屋根
+
+`roof` を指定すると、plan 内の room 形状に合わせて平面屋根を生成します。L 字や張り出しのある平面では、最大外接矩形ではなく部屋矩形の合成範囲だけを非重複の矩形 roof に分割します。
+
+```ts
+roof: {
+  overhang: 0.35,
+  thickness: 0.16,
+  heightOffset: 0,
+  materialKey: 'roof:flat-concrete',
+}
+```
+
+- `overhang` は各 room 矩形から外側へ張り出す量です。
+- `thickness` は屋根 slab の厚みです。省略時は `slabThickness` を使います。
+- `heightOffset` は `floorHeight` を基準に屋根位置を上下へずらす量です。`0` のとき屋根の中心が建物高さの上端に乗り、厚みの半分が上へはみ出します。正の値で上、負の値で下に移動します。
+- `materialKey` を省略すると `materialKeys.roof`、それもなければ `materialKeys.room.ceiling` を使います。
+- `roof: false` または未指定なら屋根は生成しません。
+
+この plan を表示するには `BuildingWorld` に渡します。
+
+```tsx
+import { BuildingWorld } from './building'
+import { worldBuildingMaterials } from './worldMaterials'
+
+<BuildingWorld
+  plan={myPlan}
+  materials={worldBuildingMaterials}
+  position={[0, 0, 0]}
+/>
+```
+
+現在の `src/worldPlan.tsx` では `plan1` と `plan2` を作り、`Buildings()` の中で 2 つの `BuildingWorld` を別々の高さに配置しています。
 
 ## 外部地面
 
