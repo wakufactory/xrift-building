@@ -13,7 +13,7 @@ export type BuildingProps = {
 }
 
 // BuildingPlan を BoxPart にコンパイルし、描画と collider に分配する。
-export function Building({ plan, materials, source, enableProfileLog = true }: BuildingProps) {
+export function Building({ plan, materials, source, enableProfileLog = false }: BuildingProps) {
   const parts = useMemo(() => compileBuildingPlan(plan), [plan])
   const sourcedParts = useMemo(() => {
     if (!source) return parts

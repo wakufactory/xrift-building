@@ -163,6 +163,8 @@ opening の `offset` は壁ローカル座標です。
 
 `OpeningSpec` は壁に開ける矩形です。
 
+- `id?`
+  - 開口を utility から参照するための ID です。省略時は、door/window それぞれの配列 index を文字列にした ID として扱います。
 - `side`
   - どの壁に開口を作るか。
 - `offset`
@@ -183,6 +185,8 @@ opening の `offset` は壁ローカル座標です。
 
 `SlabOpeningSpec` は床・天井・屋根 slab に開ける矩形です。
 
+- `id?: string`
+  - 開口を utility から参照するための ID です。省略時は、対象配列の index を文字列にした ID として扱います。
 - `position: [number, number]`
   - 部屋中心からの `[x, z]` です。
 - `size: [number, number]`
@@ -219,11 +223,23 @@ opening の `offset` は壁ローカル座標です。
   - `offset` は部屋中心からの `[x, z]` です。
   - `height` は天井 slab 下面から下方向への距離です。
   - plan の `unit` と、天井 slab の z-fighting 回避オフセット `0.001` を反映した `position` と `[0, rotationY, 0]` を返します。
+- `getCeilingOpeningPlacement(plan, { roomId, id, inset })`
+  - `id` は `SlabOpeningSpec.id`、または `id` 未指定開口に自動付与される `ceilingOpenings` 配列 index 文字列です。
+  - ceiling opening の中心 `position`、`size`、`offset` を返します。
+  - `inset` は天井 slab 下面から部屋内側、つまり下方向へずらす距離です。
+- `getCeilingOpeningPlacements(plan, { roomId, inset })`
+  - 指定 room の `ceilingOpenings` 一覧を ID 付きで返します。
 - `getWallPlacement(plan, { roomId, side, offset, height, inset })`
   - `offset` は door/window と同じ壁ローカル座標です。
   - `height` は従来通り壁の下端からの高さです。
   - `inset` は壁の室内面から部屋内側へずらす距離です。
   - 返す `rotation` は object の local `+Z` が部屋内側を向く向きです。
+- `getWallOpeningPlacement(plan, { roomId, kind, id, inset })`
+  - `kind` は `'door' | 'window'` です。
+  - `id` は `OpeningSpec.id`、または `id` 未指定開口に自動付与される配列 index 文字列です。
+  - door/window 開口の中心 `position`、壁向きの `rotation`、`side`、`offset`、`width`、`bottom`、`height`、`size` を返します。
+- `getWallOpeningPlacements(plan, { roomId, kind?, inset })`
+  - 指定 room の door/window 開口一覧を ID 付きで返します。`kind` を省略すると door と window の両方を返します。
 - `getRoomFloorFrame()` / `getRoomCeilingFrame()` / `getRoomWallFrame()`
   - 配置可能範囲、壁の接線、室内向き法線など、より低レベルな frame 情報を返します。
 - `getBuildingInfo(plan)`
@@ -234,7 +250,7 @@ opening の `offset` は壁ローカル座標です。
   - `BuildingWorld` 内で children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
   - plan は `BuildingWorld` が `BuildingPlacementProvider` で context として渡します。
   - `RoomObject.position` と `CeilingObject.position` は部屋中心からの `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
-- `useFloorPlacement()` / `useCeilingPlacement()` / `useWallPlacement()`
+- `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useCeilingOpeningPlacements()` / `useWallPlacement()` / `useWallOpeningPlacement()` / `useWallOpeningPlacements()`
   - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
   - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
 - `useBuildingInfo()` / `useRoomInfo(roomId)`

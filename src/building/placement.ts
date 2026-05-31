@@ -1,4 +1,4 @@
-import type { BuildingPlan, RoomSpec, Vec2, Vec3, WallSide } from './types'
+import type { BuildingPlan, OpeningSpec, RoomSpec, SlabOpeningSpec, Vec2, Vec3, WallSide } from './types'
 
 const wallSides: WallSide[] = ['north', 'south', 'east', 'west']
 const CEILING_Z_FIGHT_OFFSET = 0.001
@@ -29,6 +29,36 @@ export type WallPlacementInput = {
   inset?: number
 }
 
+export type WallOpeningKind = 'door' | 'window'
+
+// 部屋の壁開口を ID で取得するための入力を表す。
+export type WallOpeningPlacementInput = {
+  roomId: string
+  kind: WallOpeningKind
+  id: string
+  inset?: number
+}
+
+// 部屋の壁開口一覧を取得するための入力を表す。
+export type WallOpeningPlacementsInput = {
+  roomId: string
+  kind?: WallOpeningKind
+  inset?: number
+}
+
+// 部屋の天井開口を ID で取得するための入力を表す。
+export type CeilingOpeningPlacementInput = {
+  roomId: string
+  id: string
+  inset?: number
+}
+
+// 部屋の天井開口一覧を取得するための入力を表す。
+export type CeilingOpeningPlacementsInput = {
+  roomId: string
+  inset?: number
+}
+
 // 部屋の床面フレームと境界を表す。
 export type RoomFloorFrame = {
   room: RoomSpec
@@ -52,6 +82,31 @@ export type RoomWallFrame = {
   tangent: Vec3
   inwardNormal: Vec3
   rotation: Vec3
+}
+
+// plan.unit と省略値を反映した壁開口の配置情報を表す。
+export type WallOpeningPlacement = PlacementTransform & {
+  id: string
+  index: number
+  kind: WallOpeningKind
+  roomId: string
+  side: WallSide
+  offset: number
+  width: number
+  bottom: number
+  height: number
+  size: Vec2
+  opening: OpeningSpec
+}
+
+// plan.unit を反映した天井開口の配置情報を表す。
+export type CeilingOpeningPlacement = PlacementTransform & {
+  id: string
+  index: number
+  roomId: string
+  offset: Vec2
+  size: Vec2
+  opening: SlabOpeningSpec
 }
 
 // plan.unit を反映した建物全体の寸法と基本高さを表す。
@@ -289,6 +344,46 @@ export function getCeilingPlacement(plan: BuildingPlan, input: CeilingPlacementI
   }
 }
 
+// 指定 room の ceilingOpening を ID で取得し、その中心座標を返す。
+export function getCeilingOpeningPlacement(plan: BuildingPlan, input: CeilingOpeningPlacementInput): CeilingOpeningPlacement {
+  const placement = getCeilingOpeningPlacements(plan, input).find((opening) => opening.id === input.id)
+
+  if (!placement) {
+    throw new Error(`Ceiling opening "${input.id}" was not found in room "${input.roomId}".`)
+  }
+
+  return placement
+}
+
+// 指定 room の ceilingOpening 一覧を、ID と中心座標つきで返す。
+export function getCeilingOpeningPlacements(plan: BuildingPlan, input: CeilingOpeningPlacementsInput): CeilingOpeningPlacement[] {
+  const unit = plan.unit ?? 1
+  const sourceRoom = getRoom(plan, input.roomId)
+  const frame = getRoomCeilingFrame(plan, input.roomId)
+  const inset = (input.inset ?? 0) * unit
+
+  return (sourceRoom.ceilingOpenings ?? []).map((sourceOpening, index) => {
+    const opening = scaleSlabOpening(sourceOpening, unit)
+    const id = opening.id ?? String(index)
+    const [offsetX, offsetZ] = opening.position
+
+    return {
+      id,
+      index,
+      roomId: sourceRoom.id,
+      offset: opening.position,
+      size: opening.size,
+      opening,
+      position: [
+        frame.center[0] + offsetX,
+        frame.center[1] - inset,
+        frame.center[2] + offsetZ,
+      ],
+      rotation: [0, 0, 0],
+    }
+  })
+}
+
 // 壁面基準の offset、高さ、inset から world 配置を計算する。
 export function getWallPlacement(plan: BuildingPlan, input: WallPlacementInput): PlacementTransform {
   const unit = plan.unit ?? 1
@@ -305,6 +400,56 @@ export function getWallPlacement(plan: BuildingPlan, input: WallPlacementInput):
     ],
     rotation: frame.rotation,
   }
+}
+
+// 指定 room の door/window 開口を ID で取得し、その中心座標と壁向きの回転を返す。
+export function getWallOpeningPlacement(plan: BuildingPlan, input: WallOpeningPlacementInput): WallOpeningPlacement {
+  const placement = getWallOpeningPlacements(plan, input).find((opening) => opening.id === input.id)
+
+  if (!placement) {
+    throw new Error(`Wall opening "${input.id}" was not found in ${input.kind}s of room "${input.roomId}".`)
+  }
+
+  return placement
+}
+
+// 指定 room の door/window 開口一覧を、ID と中心座標つきで返す。
+export function getWallOpeningPlacements(plan: BuildingPlan, input: WallOpeningPlacementsInput): WallOpeningPlacement[] {
+  const unit = plan.unit ?? 1
+  const sourceRoom = getRoom(plan, input.roomId)
+  const kinds: WallOpeningKind[] = input.kind ? [input.kind] : ['door', 'window']
+
+  return kinds.flatMap((kind) => {
+    const openings = kind === 'door' ? sourceRoom.doors ?? [] : sourceRoom.windows ?? []
+
+    return openings.map((sourceOpening, index) => {
+      const opening = scaleOpening(sourceOpening, unit, kind)
+      const id = opening.id ?? String(index)
+      const frame = getRoomWallFrame(plan, { roomId: input.roomId, side: opening.side })
+      const inset = (input.inset ?? 0) * unit
+      const centerY = opening.bottom + opening.height / 2
+
+      return {
+        id,
+        index,
+        kind,
+        roomId: sourceRoom.id,
+        side: opening.side,
+        offset: opening.offset,
+        width: opening.width,
+        bottom: opening.bottom,
+        height: opening.height,
+        size: [opening.width, opening.height],
+        opening,
+        position: [
+          frame.center[0] + frame.tangent[0] * opening.offset + frame.inwardNormal[0] * inset,
+          centerY,
+          frame.center[2] + frame.tangent[2] * opening.offset + frame.inwardNormal[2] * inset,
+        ],
+        rotation: frame.rotation,
+      }
+    })
+  })
 }
 
 function getRoomBounds(rooms: RoomSpec[]) {
@@ -355,6 +500,31 @@ function scaleRoom(room: RoomSpec, unit: number): RoomSpec {
     position: scaleVec2(room.position, unit),
     size: scaleVec2(room.size, unit),
     wallThickness: scaleOptional(room.wallThickness, unit),
+  }
+}
+
+function scaleOpening(opening: OpeningSpec, unit: number, kind: WallOpeningKind): OpeningSpec & { bottom: number, height: number } {
+  const defaultBottom = kind === 'door' ? 0 : 1.05
+  const defaultHeight = kind === 'door' ? 2.15 : 1.05
+
+  return {
+    ...opening,
+    offset: opening.offset * unit,
+    width: opening.width * unit,
+    bottom: (opening.bottom ?? defaultBottom) * unit,
+    height: (opening.height ?? defaultHeight) * unit,
+  }
+}
+
+function scaleSlabOpening(opening: SlabOpeningSpec, unit: number): SlabOpeningSpec {
+  if (unit === 1) {
+    return opening
+  }
+
+  return {
+    ...opening,
+    position: scaleVec2(opening.position, unit),
+    size: scaleVec2(opening.size, unit),
   }
 }
 

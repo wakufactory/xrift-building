@@ -1,5 +1,16 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { getBuildingInfo, getCeilingPlacement, getFloorPlacement, getRoomInfo, getWallPlacement } from './placement'
+import {
+  getBuildingInfo,
+  getCeilingOpeningPlacement,
+  getCeilingOpeningPlacements,
+  getCeilingPlacement,
+  getFloorPlacement,
+  getRoomInfo,
+  getWallOpeningPlacement,
+  getWallOpeningPlacements,
+  getWallPlacement,
+} from './placement'
+import type { WallOpeningKind } from './placement'
 import type { BuildingPlan, Vec2, WallSide } from './types'
 
 type BuildingPlacementContextValue = {
@@ -138,6 +149,49 @@ export function useCeilingPlacement({
   )
 }
 
+export type UseCeilingOpeningPlacementInput = {
+  roomId: string
+  id: string
+  inset?: number
+}
+
+export function useCeilingOpeningPlacement({
+  roomId,
+  id,
+  inset,
+}: UseCeilingOpeningPlacementInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => getCeilingOpeningPlacement(plan, {
+      roomId,
+      id,
+      inset,
+    }),
+    [id, inset, plan, roomId],
+  )
+}
+
+export type UseCeilingOpeningPlacementsInput = {
+  roomId: string
+  inset?: number
+}
+
+export function useCeilingOpeningPlacements({
+  roomId,
+  inset,
+}: UseCeilingOpeningPlacementsInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => getCeilingOpeningPlacements(plan, {
+      roomId,
+      inset,
+    }),
+    [inset, plan, roomId],
+  )
+}
+
 export type WallObjectProps = {
   roomId: string
   side: WallSide
@@ -206,6 +260,55 @@ export function useWallPlacement({
       inset,
     }),
     [height, inset, offset, plan, position, roomId, side],
+  )
+}
+
+export type UseWallOpeningPlacementInput = {
+  roomId: string
+  kind: WallOpeningKind
+  id: string
+  inset?: number
+}
+
+export function useWallOpeningPlacement({
+  roomId,
+  kind,
+  id,
+  inset,
+}: UseWallOpeningPlacementInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => getWallOpeningPlacement(plan, {
+      roomId,
+      kind,
+      id,
+      inset,
+    }),
+    [id, inset, kind, plan, roomId],
+  )
+}
+
+export type UseWallOpeningPlacementsInput = {
+  roomId: string
+  kind?: WallOpeningKind
+  inset?: number
+}
+
+export function useWallOpeningPlacements({
+  roomId,
+  kind,
+  inset,
+}: UseWallOpeningPlacementsInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => getWallOpeningPlacements(plan, {
+      roomId,
+      kind,
+      inset,
+    }),
+    [inset, kind, plan, roomId],
   )
 }
 

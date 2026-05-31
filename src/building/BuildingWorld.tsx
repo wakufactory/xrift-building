@@ -26,7 +26,7 @@ export function BuildingWorld({
   position = [0, 0, 0],
   scale = 1,
   source,
-  enableProfileLog = true,
+  enableProfileLog = false,
   children,
 }: BuildingWorldProps) {
   const autoSourceId = useId()
