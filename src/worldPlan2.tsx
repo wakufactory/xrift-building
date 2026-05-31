@@ -306,7 +306,7 @@ export function Buildings2({position=[0,0,0]}:{
           plan={courtyardPlan1}
           materials={worldBuildingMaterials}
           position={[0, 0, 0]}
-          enableProfileLog={true}
+          enableProfileLog={false}
         >
           <RoomObject roomId="1F-atrium" position={[0, 0]} height={0.05}>
             <BoxFurniture id="atrium-table" size={[2.2, 2.2]} color="#9e735d" />
@@ -339,7 +339,7 @@ export function Buildings2({position=[0,0,0]}:{
           plan={courtyardPlan2}
           materials={worldBuildingMaterials}
           position={[0, 5.2, 0]}
-          enableProfileLog={true}
+          enableProfileLog={false}
         >
           <RoomObject roomId="2F-south-terrace" position={[0, 0.8]}>
             <BoxFurniture id="terrace-table" size={[1.8, 1.2]} color="#d8bf82" />

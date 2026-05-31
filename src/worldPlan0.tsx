@@ -1,18 +1,21 @@
 import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject } from './building'
 import type { BuildingPlan, BoxInstance, BoxPartColor, Vec2, Vec3 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
+import { Text } from '@react-three/drei'
 
+//使用material
 const materialKeys = {
   room: {
     floor: 'floor:warm-wood',
-    wall: 'wall:plaster',
+    wall: 'wall:gemin-concrete',
     ceiling: 'ceiling:soft-white',
   },
   exteriorGround: 'ground:outdoor',
-  pillar: 'pillar:concrete',
+  pillar: 'trim:gemin-metal',
   roof: 'roof:flat-concrete',
 }
 
+//一階間取りデータ
 const courtyardPlan1:BuildingPlan= {
     unit: 1,
     floorHeight: 3.2,
@@ -34,7 +37,7 @@ const courtyardPlan1:BuildingPlan= {
         size: [6, 6],
         surfaces: {
           floor: { materialKey: 'floor:stone' },
-          wall: { materialKey: 'wall:plaster' },
+          wall: { materialKey: 'wall:gemin-wood' },
           walls: {
             south: { color:'#cfc7b8'},
             east: { color: '#d7d0c2'},
@@ -54,7 +57,7 @@ const courtyardPlan1:BuildingPlan= {
       },
     ],
   }
-
+//二階間取りデータ
 const courtyardPlan2:BuildingPlan =  {
     unit: 1,
     floorHeight: 3,
@@ -74,8 +77,8 @@ const courtyardPlan2:BuildingPlan =  {
     rooms: [
       {
         id: '2F-room',
-        position: [0, 0],
-        size: [6, 6],
+        position: [0, -1],
+        size: [6, 4],
         surfaces: {
           floor: { materialKey: 'floor:warm-wood' },
           wall: { materialKey: 'wall:gallery-white' },
@@ -97,6 +100,7 @@ const courtyardPlan2:BuildingPlan =  {
     ],
   }
 
+//テーブル
 function BoxFurniture({
   id,
   size,
@@ -122,7 +126,6 @@ function BoxFurniture({
       color,
     },
   ]
-
   return (
     <BoxLayer
       id={id}
@@ -133,36 +136,48 @@ function BoxFurniture({
   )
 }
 
+//全体まとめ
 export function SimpleBuilding({position=[0,0,0]}:{
   position?:Vec3
 }) {
   return (
     <BoxBatchProvider>
       <group position={position}>
+        //一階
         <BuildingWorld
           id="courtyard-floor-1"
           name="Courtyard 1F"
           plan={courtyardPlan1}
           materials={worldBuildingMaterials}
           position={[0, 0, 0]}
-          enableProfileLog={true}
+          enableProfileLog={false}
         >
+          //部屋に椅子を配置
           <RoomObject roomId="1F-room" position={[-1.5, 1]} height={0.05}>
             <BoxFurniture id="atrium-table" size={[1.2, 1.5]} color="#9e735d" />
           </RoomObject>
 
         </BuildingWorld>
-
+        //二階
         <BuildingWorld
           id="courtyard-floor-2"
           name="Courtyard 2F"
           plan={courtyardPlan2}
           materials={worldBuildingMaterials}
           position={[0, 3.2, 0]}
-          enableProfileLog={true}
+          enableProfileLog={false}
         >
         </BuildingWorld>
-
+      //ラベル
+      <Text
+        position={[0, 3.5, 3]}
+        fontSize={0.8}
+        color="#161f3f"
+        anchorX="center"
+        anchorY="middle"
+      >
+        SimpleHouse
+      </Text>
       </group>
     </BoxBatchProvider>
   )
