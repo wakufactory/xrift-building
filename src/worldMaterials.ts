@@ -19,6 +19,60 @@ export const worldBuildingMaterials = {
       tileSize: [1, 1],
     },
   },
+  'floor:gemin-wood': {
+    color: '#9a9183',
+    roughness: 0.8,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemin_tex1_wood.png',
+      tileSize: [0.75, 0.75],
+    },
+  },
+  'floor:gemin-concrete': {
+    color: '#a8a8a1',
+    roughness: 0.9,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemin_tex1_concrete.png',
+      tileSize: [1, 1],
+    },
+  },
+  'wall:gemin-wood': {
+    color: '#e2b67a',
+    roughness: 0.8,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemin_tex1_wood.png',
+      tileSize: [0.75, 0.75],
+    },
+  },
+  'wall:gemin-brick': {
+    color: '#c5c4bb',
+    roughness: 0.88,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemin_tex1_brick.png',
+      tileSize: [1.5, 1.5],
+    },
+  },
+  'wall:gemin-concrete': {
+    color: '#a8a8a1',
+    roughness: 0.9,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemin_tex1_concrete.png',
+      tileSize: [1, 1],
+    },
+  },
+  'trim:gemin-metal': {
+    color: '#b7b9b6',
+    roughness: 0.36,
+    metalness: 0.65,
+    texture: {
+      map: 'textures/gemin_tex1_metal.png',
+      tileSize: [1, 1],
+    },
+  },
   'floor:stone': {
     color: '#747b7c',
     roughness: 0.9,
