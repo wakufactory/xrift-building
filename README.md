@@ -305,13 +305,21 @@ import { BuildingWorld, CeilingObject, RoomObject, WallObject } from './building
     {/* ceiling-mounted mesh */}
   </CeilingObject>
 
+  <CeilingObject roomId="2-gallery" openingId="atrium-hole" inset={0.04}>
+    {/* mesh aligned to the ceiling opening center */}
+  </CeilingObject>
+
   <WallObject roomId="2-gallery" side="north" offset={2} height={1.6} inset={0.04}>
     {/* wall-mounted mesh. local +Z faces into the room. */}
+  </WallObject>
+
+  <WallObject roomId="2-gallery" openingKind="window" openingId="0" inset={0.04}>
+    {/* mesh aligned to the window opening center */}
   </WallObject>
 </BuildingWorld>
 ```
 
-`RoomObject` / `CeilingObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` と `CeilingObject` の `position` は部屋中心からの `[x, z]` です。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。
+`RoomObject` / `CeilingObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` と `CeilingObject` の `position` は部屋中心からの `[x, z]` です。`CeilingObject.openingId` を指定すると `ceilingOpenings` の中心に配置します。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。`WallObject.openingId` を指定すると door/window 開口の中心に配置し、`side` と高さは開口から自動解決します。door と window に同じ ID があり得る場合は `openingKind="door"` または `openingKind="window"` を指定します。
 
 component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useWallPlacement()` / `useWallOpeningPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
 

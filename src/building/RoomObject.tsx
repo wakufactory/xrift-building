@@ -77,20 +77,28 @@ export function RoomObject({
 }
 
 export type CeilingObjectProps = RoomObjectProps
+  & {
+    openingId?: string
+    inset?: number
+  }
 
 export function CeilingObject({
   roomId,
   position,
   height,
   rotationY,
+  openingId,
+  inset,
   children,
 }: CeilingObjectProps) {
   const objectContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
-  const transform = useCeilingPlacement({
+  const transform = useCeilingObjectPlacement({
     roomId,
     position,
     height,
     rotationY,
+    openingId,
+    inset,
   })
 
   return (
@@ -149,6 +157,42 @@ export function useCeilingPlacement({
   )
 }
 
+type UseCeilingObjectPlacementInput = UseCeilingPlacementInput & {
+  openingId?: string
+  inset?: number
+}
+
+function useCeilingObjectPlacement({
+  roomId,
+  position,
+  height,
+  rotationY,
+  openingId,
+  inset,
+}: UseCeilingObjectPlacementInput) {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => {
+      if (openingId) {
+        return getCeilingOpeningPlacement(plan, {
+          roomId,
+          id: openingId,
+          inset: inset ?? height,
+        })
+      }
+
+      return getCeilingPlacement(plan, {
+        roomId,
+        offset: position,
+        height,
+        rotationY,
+      })
+    },
+    [height, inset, openingId, plan, position, roomId, rotationY],
+  )
+}
+
 export type UseCeilingOpeningPlacementInput = {
   roomId: string
   id: string
@@ -194,11 +238,13 @@ export function useCeilingOpeningPlacements({
 
 export type WallObjectProps = {
   roomId: string
-  side: WallSide
+  side?: WallSide
   offset?: number
   position?: number
   height?: number
   inset?: number
+  openingId?: string
+  openingKind?: WallOpeningKind
   children?: ReactNode
 }
 
@@ -209,22 +255,29 @@ export function WallObject({
   position,
   height,
   inset,
+  openingId,
+  openingKind,
   children,
 }: WallObjectProps) {
   const roomContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
-  const wallContext = useMemo<WallObjectContextValue>(() => ({ roomId, side }), [roomId, side])
-  const transform = useWallPlacement({
+  const placement = useWallObjectPlacement({
     roomId,
     side,
     offset: offset ?? position,
     height,
     inset,
+    openingId,
+    openingKind,
   })
+  const wallContext = useMemo<WallObjectContextValue>(
+    () => ({ roomId, side: placement.side }),
+    [placement.side, roomId],
+  )
 
   return (
     <RoomObjectContext.Provider value={roomContext}>
       <WallObjectContext.Provider value={wallContext}>
-        <group position={transform.position} rotation={transform.rotation}>
+        <group position={placement.position} rotation={placement.rotation}>
           {children}
         </group>
       </WallObjectContext.Provider>
@@ -239,6 +292,69 @@ export type UseWallPlacementInput = {
   position?: number
   height?: number
   inset?: number
+}
+
+type WallObjectPlacement = ReturnType<typeof getWallPlacement> & {
+  side: WallSide
+}
+
+type UseWallObjectPlacementInput = Omit<UseWallPlacementInput, 'side'> & {
+  side?: WallSide
+  openingId?: string
+  openingKind?: WallOpeningKind
+}
+
+function useWallObjectPlacement({
+  roomId,
+  side,
+  offset,
+  position,
+  height,
+  inset,
+  openingId,
+  openingKind,
+}: UseWallObjectPlacementInput): WallObjectPlacement {
+  const { plan } = useBuildingPlacement()
+
+  return useMemo(
+    () => {
+      if (openingId) {
+        const placement = openingKind
+          ? getWallOpeningPlacement(plan, {
+            roomId,
+            kind: openingKind,
+            id: openingId,
+            inset,
+          })
+          : getWallOpeningPlacements(plan, {
+            roomId,
+            inset,
+          }).find((opening) => opening.id === openingId)
+
+        if (!placement) {
+          throw new Error(`Wall opening "${openingId}" was not found in room "${roomId}".`)
+        }
+
+        return placement
+      }
+
+      if (!side) {
+        throw new Error('WallObject requires either side or openingId.')
+      }
+
+      return {
+        ...getWallPlacement(plan, {
+          roomId,
+          side,
+          offset: offset ?? position,
+          height,
+          inset,
+        }),
+        side,
+      }
+    },
+    [height, inset, offset, openingId, openingKind, plan, position, roomId, side],
+  )
 }
 
 export function useWallPlacement({

@@ -250,6 +250,8 @@ opening の `offset` は壁ローカル座標です。
   - `BuildingWorld` 内で children を直接 `<group>` で囲み、上記 utility の結果を `position` / `rotation` に適用します。
   - plan は `BuildingWorld` が `BuildingPlacementProvider` で context として渡します。
   - `RoomObject.position` と `CeilingObject.position` は部屋中心からの `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
+  - `CeilingObject.openingId` を指定すると、`CeilingObject.position` の代わりに `ceilingOpenings` の中心へ配置します。この場合の `inset` は天井 slab 下面から下方向への距離です。
+  - `WallObject.openingId` を指定すると、`WallObject.side` / `offset` / `height` の代わりに door/window 開口の中心へ配置し、`side` は開口から自動解決します。door と window に同じ ID があり得る場合は `openingKind` で `'door' | 'window'` を指定できます。
 - `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useCeilingOpeningPlacements()` / `useWallPlacement()` / `useWallOpeningPlacement()` / `useWallOpeningPlacements()`
   - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
   - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
