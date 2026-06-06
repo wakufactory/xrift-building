@@ -2,27 +2,30 @@
 import { BoxLayer, useRoomInfo, useWallObjectContext } from './building'
 import type { BoxInstance, BoxPartColor, Vec2 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
+import { useWallOpeningPlacement } from './building'
 
-//テーブル
+//1つ足テーブル
 export const TableObject = ({
     size = [1,1],
+    height = 1,
     color = '#5d4646'
   } : {
     size?:Vec2,
+    height?:number,
     color?:BoxPartColor
 }) => {
   const tableBoxes: BoxInstance[] = [
     {
       id: 'table-leg',
       position: [0, 0.5, 0],
-      size: [0.2, 1, 0.2],
+      size: [0.2, height, 0.2],
       materialKey: 'furniture:neutral',
       collider: false,
       color:color
     },
     {
       id: 'table-f',
-      position: [0, 1.0, 0],
+      position: [0, height, 0],
       size: [size[0], 0.05, size[1]],
       materialKey: 'furniture:neutral',
       color:color
@@ -39,23 +42,32 @@ export const TableObject = ({
 }
 
 //窓枠
-export const WindowFrame = ({
-  windowSize = [1, 1],
+export const WindowFrameObject = ({
   frameSize = [0.1, 0.3],
   color = '#5d4646',
+  roomId = '',
+  windowId = ''
 }: {
-  windowSize: Vec2
+  roomId: string
+  windowId: string
+  windowSize?: Vec2
   frameSize?: Vec2
   color?: BoxPartColor
 }) => {
-  const wallObject = useWallObjectContext()
-  const effectiveRoomId = wallObject?.roomId ?? ''
-  const effectiveSide = wallObject?.side ?? 'south'
-  const room = useRoomInfo(effectiveRoomId)
+  const room = useRoomInfo(roomId)
   const wallThickness = room.wallThickness
+  const frameZ = -wallThickness / 2
+  const windowPlacement = useWallOpeningPlacement({
+    roomId: roomId,
+    kind: 'window',
+    id: windowId,
+    inset: frameZ,
+  })
+  const windowSize = windowPlacement.size
+
   const frameWidth = frameSize[0]
   const frameDepth = frameSize[1]
-  const frameZ = -wallThickness / 2
+
   const materialKey = 'furniture:neutral'
 
   // WindowFrame は WallObject の子として、X=壁方向、Y=高さ、+Z=室内側の
@@ -63,7 +75,7 @@ export const WindowFrame = ({
   const frameBoxes: BoxInstance[] = [
     {
       id: 'r',
-      position: [windowSize[0] / 2 - frameWidth / 2, 0, frameZ],
+      position: [windowSize[0] / 2 - frameWidth / 2, 0, 0],
       size: [frameWidth, windowSize[1], frameDepth],
       materialKey,
       collider: false,
@@ -71,7 +83,7 @@ export const WindowFrame = ({
     },
     {
       id: 'l',
-      position: [-windowSize[0] / 2 + frameWidth / 2, 0, frameZ],
+      position: [-windowSize[0] / 2 + frameWidth / 2, 0, 0],
       size: [frameWidth, windowSize[1], frameDepth],
       materialKey,
       collider: false,
@@ -79,7 +91,7 @@ export const WindowFrame = ({
     },
     {
       id: 't',
-      position: [0, windowSize[1] / 2 - frameWidth / 2, frameZ],
+      position: [0, windowSize[1] / 2 - frameWidth / 2, 0],
       size: [windowSize[0] - frameWidth * 2, frameWidth, frameDepth],
       materialKey,
       collider: false,
@@ -87,7 +99,7 @@ export const WindowFrame = ({
     },
     {
       id: 'b',
-      position: [0, -windowSize[1] / 2 + frameWidth / 2, frameZ],
+      position: [0, -windowSize[1] / 2 + frameWidth / 2, 0],
       size: [windowSize[0] - frameWidth * 2, frameWidth, frameDepth],
       materialKey,
       collider: false,
@@ -96,11 +108,13 @@ export const WindowFrame = ({
   ]
 
   return(
+    <group position={windowPlacement.position} rotation={windowPlacement.rotation}>
     <BoxLayer
-      id={`window-frame:${effectiveRoomId}:${effectiveSide}`}
+      id={`window-frame:${roomId}:${windowId}`}
       parts={frameBoxes}
       materials={worldBuildingMaterials}
     />
+    </group>
   )
 }
 
@@ -121,12 +135,21 @@ export const DoorFrame = ({
   const wallThickness = room.wallThickness
   const frameZ = -wallThickness / 2
   const materialKey = 'furniture:neutral'
-
+  const width = doorSize[0]
+  const height = doorSize[1]
   const frameBoxes: BoxInstance[] = [
     {
       id: 'r',
-      position: [0,0, frameZ],
-      size: [...doorSize, doorThickness],
+      position: [width/4,0, frameZ],
+      size: [width/2-0.01,height, doorThickness],
+      materialKey,
+      collider: false,
+      color,
+    },
+    {
+      id: 'l',
+      position: [-width/4,0, frameZ],
+      size: [width/2-0.01,height, doorThickness],
       materialKey,
       collider: false,
       color,

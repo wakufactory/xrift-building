@@ -3,10 +3,10 @@ import { useFrame} from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import { Mesh } from 'three'
 import { RigidBody} from '@react-three/rapier'
-import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject } from './building'
+import { BuildingWorld, BoxBatchProvider, BoxLayer, RoomObject, WallObject,CeilingObject } from './building'
 import type { BuildingPlan, Vec3 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
-import { TableObject,WindowFrame,DoorFrame } from './fittings.tsx'
+import { TableObject,WindowFrameObject,DoorFrame } from './fittings.tsx'
 
 /// north -z east +x south +z west x
 
@@ -53,8 +53,8 @@ export const plan1: BuildingPlan = {
         },
       },
       doors: [
-        { side: 'north', offset: 0, width: 2.4, height: 2.25 },
-        { side: 'east', offset: 2.7, width: 2.1, height: 2.25 },
+        { side: 'north', offset: 0, width: 2.5, height: 2.25 },
+        { side: 'east', id:'enterdoor', offset: 2.5, width: 2., height: 2.25 },
       ],
       windows: [
         { side: 'west', offset: 1, width: 1.5, bottom: 1, height: 1.},
@@ -224,20 +224,56 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
             </mesh>
           </RigidBody>
         </RoomObject>
-        //窓枠
-        <WallObject roomId="1-robby" side='south' offset={0} height={2}>
-          <WindowFrame windowSize={[5,2]} frameSize={[0.1,0.3]}/>
-        </WallObject>
-        <WallObject roomId="1-robby" side='west' offset={1} height={1.5}>
-          <WindowFrame windowSize={[1.5,1]} frameSize={[0.1,0.3]}/>
-        </WallObject>
-        <WallObject roomId="1-robby" side='west' offset={-2.5} height={1.5}>
-          <WindowFrame windowSize={[1.5,1]} frameSize={[0.1,0.3]}/>
-        </WallObject>
-        //ドア  offset: 2.7, width: 2.1, height: 2.25 
-        <WallObject roomId="1-robby" side='east' offset={2.7} height={2.25/2}>
+        //天井オブジェクト
+        <CeilingObject roomId="1-robby" position={[0, 0]} height={0.1}>
+          <mesh position={[0, 0, 0]} rotation={[Math.PI/2,0,0]}>
+            <planeGeometry args={[1, 1]} />
+            <meshStandardMaterial color={'#ffffff'} roughness={1.} emissive={'#ffffff'}/>
+          </mesh> 
+        </CeilingObject>
+        //窓枠  
+        <WindowFrameObject roomId="1-robby" windowId="0" frameSize={[0.1,0.3]}/>
+        <WindowFrameObject roomId="1-robby" windowId="1" frameSize={[0.1,0.3]}/>
+        <WindowFrameObject roomId="1-robby" windowId="2" frameSize={[0.1,0.3]}/>
+
+        //入口ドア  offset: 2.7, width: 2.1, height: 2.25 
+        <WallObject roomId="1-robby" openingId="enterdoor" >
           <DoorFrame doorSize={[2.1,2.25]} doorThickness={0.1}/>
         </WallObject>
+        //階段
+        <RoomObject roomId="1-robby" position={[-2.5,-3]} rotationY={0}>
+          <BoxLayer
+            id="kaidan"
+            parts={[
+              {
+                id:"k1",
+                position:[0,1,-0.75],
+                size:[2,0.1,0.5],
+                materialKey:"floor:stone"
+              },
+              {
+                id:"k2",
+                position:[0,2,-0.25],
+                size:[2,0.1,0.5],
+                materialKey:"floor:stone"
+              },
+              {
+                id:"k3",
+                position:[0,3,0.25],
+                size:[2,0.1,0.5],
+                materialKey:"floor:stone"
+              },
+              {
+                id:"k4",
+                position:[0,4,0.75],
+                size:[2,0.1,0.5],
+                materialKey:"floor:stone"
+              },
+            ]}
+            materials={worldBuildingMaterials}
+            collider
+          />
+        </RoomObject>
       </BuildingWorld>
       //二階
       {true &&
