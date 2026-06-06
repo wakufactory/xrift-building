@@ -1,5 +1,5 @@
 
-import { BoxLayer, useRoomInfo, useWallObjectContext } from './building'
+import { BoxLayer, useRoomInfo, useWallObjectContext,WallObject } from './building'
 import type { BoxInstance, BoxPartColor, Vec2 } from './building'
 import { worldBuildingMaterials } from './worldMaterials'
 import { useWallOpeningPlacement } from './building'
@@ -49,29 +49,29 @@ export const WindowFrameObject = ({
   windowId = ''
 }: {
   roomId: string
-  windowId: string
+  windowId: string 
   windowSize?: Vec2
   frameSize?: Vec2
   color?: BoxPartColor
 }) => {
+  //壁厚取得
   const room = useRoomInfo(roomId)
   const wallThickness = room.wallThickness
   const frameZ = -wallThickness / 2
+  //窓情報取得
   const windowPlacement = useWallOpeningPlacement({
     roomId: roomId,
     kind: 'window',
     id: windowId,
     inset: frameZ,
   })
-  const windowSize = windowPlacement.size
-
+  const windowSize = windowPlacement.size 
   const frameWidth = frameSize[0]
   const frameDepth = frameSize[1]
-
   const materialKey = 'furniture:neutral'
 
   // WindowFrame は WallObject の子として、X=壁方向、Y=高さ、+Z=室内側の
-  // 壁ローカル座標で作る。親 WallObject が side ごとの回転を担当する。
+  // 壁ローカル座標で作る。
   const frameBoxes: BoxInstance[] = [
     {
       id: 'r',
@@ -109,11 +109,11 @@ export const WindowFrameObject = ({
 
   return(
     <group position={windowPlacement.position} rotation={windowPlacement.rotation}>
-    <BoxLayer
-      id={`window-frame:${roomId}:${windowId}`}
-      parts={frameBoxes}
-      materials={worldBuildingMaterials}
-    />
+      <BoxLayer
+        id={`window-frame:${roomId}:${windowId}`}
+        parts={frameBoxes}
+        materials={worldBuildingMaterials}
+      />
     </group>
   )
 }
@@ -135,8 +135,8 @@ export const DoorFrame = ({
   const wallThickness = room.wallThickness
   const frameZ = -wallThickness / 2
   const materialKey = 'furniture:neutral'
-  const width = doorSize[0]
-  const height = doorSize[1]
+  const width = doorSize[0] 
+  const height = doorSize[1] 
   const frameBoxes: BoxInstance[] = [
     {
       id: 'r',
