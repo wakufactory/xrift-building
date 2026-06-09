@@ -73,6 +73,42 @@ export const worldBuildingMaterials = {
       tileSize: [1, 1],
     },
   },
+  'floor:gemin-carpet': {
+    color: '#8b8780',
+    roughness: 0.96,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemini_tex2_carpet.png',
+      tileSize: [0.75, 0.75],
+    },
+  },
+  'wall:gemin-fabric': {
+    color: '#e8e6df',
+    roughness: 0.9,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemini_tex2_fabric.png',
+      tileSize: [0.75, 0.75],
+    },
+  },
+  'trim:gemin-brushed-metal': {
+    color: '#c5c7c4',
+    roughness: 0.32,
+    metalness: 0.7,
+    texture: {
+      map: 'textures/gemini_tex2_brushed-metal.png',
+      tileSize: [1, 1],
+    },
+  },
+  'wall:gemin-tile': {
+    color: '#a7a9a4',
+    roughness: 0.72,
+    metalness: 0,
+    texture: {
+      map: 'textures/gemini_tex2_tile.png',
+      tileSize: [1.5, 1.5],
+    },
+  },
   'floor:stone': {
     color: '#747b7c',
     roughness: 0.9,
