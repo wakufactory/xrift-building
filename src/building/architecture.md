@@ -99,9 +99,10 @@ xrift-building-world/
   - 壁 box の厚みです。
 - `slabThickness: number`
   - 床と天井 slab の厚みです。
-- `pillar?: { thickness?: number }`
+- `pillar?: PillarSpec`
   - 部屋の四隅に置く柱の X/Z 方向の太さです。
   - 未指定時は `wallThickness * 1.4` です。
+  - `thickness`, `materialKey`, `color`, `hidden`, `noCollider` を指定できます。
 - `roof?: RoofSpec | false`
   - room 形状に合わせて分割生成する平面屋根です。
   - `false` または未指定時は生成しません。
@@ -252,6 +253,7 @@ opening の `offset` は壁ローカル座標です。
   - `RoomObject.position` と `CeilingObject.position` は部屋中心からの `[x, z]`、`WallObject.offset` は door/window と同じ壁ローカル offset です。
   - `CeilingObject.openingId` を指定すると、`CeilingObject.position` の代わりに `ceilingOpenings` の中心へ配置します。この場合の `inset` は天井 slab 下面から下方向への距離です。
   - `WallObject.openingId` を指定すると、`WallObject.side` / `offset` / `height` の代わりに door/window 開口の中心へ配置し、`side` は開口から自動解決します。door と window に同じ ID があり得る場合は `openingKind` で `'door' | 'window'` を指定できます。
+  - `RoomObject` / `CeilingObject` / `WallObject` は内部の外側 `<group>` へ `ref` を forward します。Three.js の world 座標はこの ref から `getWorldPosition()` で取得できます。
 - `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useCeilingOpeningPlacements()` / `useWallPlacement()` / `useWallOpeningPlacement()` / `useWallOpeningPlacements()`
   - `BuildingWorld` 内の任意 component から context の plan を使って transform だけを取得します。
   - `BuildingWorld.id` から plan を検索する global registry は持ちません。複数階や複数棟で同じ room id があっても、React ツリー上の親 `BuildingWorld` が配置対象を決めます。
@@ -343,7 +345,8 @@ opening の `offset` は壁ローカル座標です。
 
 - 高さは z-fighting を避けるため、上端だけ `0.001` はみ出す `plan.floorHeight + 0.001` です。
 - 太さは `plan.pillar?.thickness ?? plan.wallThickness * 1.4` です。
-- material key は `plan.materialKeys.pillar` です。
+- material key は `plan.pillar?.materialKey ?? plan.materialKeys.pillar` です。
+- `color`, `hidden`, `noCollider` は `SurfaceSpec` と同じ意味で反映されます。
 
 隣接 room から完全一致する柱が生成された場合は、最後の dedupe で除去されます。
 

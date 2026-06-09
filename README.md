@@ -321,6 +321,18 @@ import { BuildingWorld, CeilingObject, RoomObject, WallObject } from './building
 
 `RoomObject` / `CeilingObject` / `WallObject` は親の `BuildingWorld` から plan を受け取ります。`RoomObject` と `CeilingObject` の `position` は部屋中心からの `[x, z]` です。`CeilingObject.openingId` を指定すると `ceilingOpenings` の中心に配置します。`WallObject` の `offset` は door/window と同じ壁ローカル offset です。`WallObject.openingId` を指定すると door/window 開口の中心に配置し、`side` と高さは開口から自動解決します。door と window に同じ ID があり得る場合は `openingKind="door"` または `openingKind="window"` を指定します。
 
+`RoomObject` / `CeilingObject` / `WallObject` は内部 `<group>` へ `ref` を渡せます。Three.js の world 座標が必要な場合は、その ref から `getWorldPosition()` を呼びます。
+
+```tsx
+const windowRef = useRef<Group>(null)
+
+<WallObject ref={windowRef} roomId="2-gallery" openingKind="window" openingId="0" inset={0.04}>
+  {/* mesh */}
+</WallObject>
+
+windowRef.current?.getWorldPosition(worldPosition)
+```
+
 component ではなく transform だけ使いたい場合は、`BuildingWorld` の内側で `useFloorPlacement()` / `useCeilingPlacement()` / `useCeilingOpeningPlacement()` / `useWallPlacement()` / `useWallOpeningPlacement()` を使います。これも plan を直接渡さず、親の `BuildingWorld` から受け取ります。
 
 ```tsx
@@ -400,10 +412,13 @@ exteriorGround: false
 ```ts
 pillar: {
   thickness: 0.25,
+  materialKey: 'pillar:concrete',
+  color: [0.9, 0.86, 0.76],
+  noCollider: false,
 }
 ```
 
-`pillar.thickness` を省略すると `wallThickness * 1.4` が使われます。柱の material は `materialKeys.pillar` で指定します。
+`pillar.thickness` を省略すると `wallThickness * 1.4` が使われます。柱の material は `materialKeys.pillar` がデフォルトで、`pillar.materialKey` で上書きできます。`color`, `hidden`, `noCollider` は `SurfaceSpec` と同じ意味で指定できます。
 
 隣接する部屋で同じ位置・同じサイズの柱が生成された場合、完全一致するものだけが自動で重複除去されます。
 

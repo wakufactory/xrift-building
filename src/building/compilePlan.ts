@@ -822,6 +822,7 @@ function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
   const wallThickness = room.wallThickness ?? plan.wallThickness
   const pillarSize = plan.pillar?.thickness ?? wallThickness * 1.4
   const pillarHeight = plan.floorHeight + 0.001
+  const pillarSurface = plan.pillar
   const y = pillarHeight / 2
 
   // 角柱は装飾であり、衝突境界を分かりやすくする役割も持つ。隣接部屋
@@ -831,12 +832,13 @@ function compileRoomTrim(plan: BuildingPlan, room: RoomSpec): BoxPart[] {
     [width / 2, -depth / 2],
     [-width / 2, depth / 2],
     [width / 2, depth / 2],
-  ].map(([dx, dz], index) => ({
+  ].map(([dx, dz], index) => applySurfaceSpec({
     id: `${room.id}:pillar:${index}`,
     kind: 'pillar',
     position: [x + dx, y, z + dz],
     size: [pillarSize, pillarHeight, pillarSize],
-    materialKey: plan.materialKeys.pillar,
+    materialKey: pillarSurface?.materialKey ?? plan.materialKeys.pillar,
+    color: pillarSurface?.color,
     collider: true,
-  }))
+  }, pillarSurface))
 }

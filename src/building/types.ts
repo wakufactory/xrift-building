@@ -44,7 +44,7 @@ export type ExteriorGroundSpec = {
 }
 
 // 部屋角に置く柱の設定を表す。
-export type PillarSpec = {
+export type PillarSpec = SurfaceSpec & {
   thickness?: number
 }
 

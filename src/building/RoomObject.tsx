@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { createContext, forwardRef, useContext, useMemo, type ReactNode } from 'react'
+import type { Group } from 'three'
 import {
   getBuildingInfo,
   getCeilingOpeningPlacement,
@@ -52,13 +53,13 @@ export type RoomObjectProps = {
   children?: ReactNode
 }
 
-export function RoomObject({
+export const RoomObject = forwardRef<Group, RoomObjectProps>(function RoomObject({
   roomId,
   position,
   height,
   rotationY,
   children,
-}: RoomObjectProps) {
+}, ref) {
   const objectContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
   const transform = useFloorPlacement({
     roomId,
@@ -69,12 +70,12 @@ export function RoomObject({
 
   return (
     <RoomObjectContext.Provider value={objectContext}>
-      <group position={transform.position} rotation={transform.rotation}>
+      <group ref={ref} position={transform.position} rotation={transform.rotation}>
         {children}
       </group>
     </RoomObjectContext.Provider>
   )
-}
+})
 
 export type CeilingObjectProps = RoomObjectProps
   & {
@@ -82,7 +83,7 @@ export type CeilingObjectProps = RoomObjectProps
     inset?: number
   }
 
-export function CeilingObject({
+export const CeilingObject = forwardRef<Group, CeilingObjectProps>(function CeilingObject({
   roomId,
   position,
   height,
@@ -90,7 +91,7 @@ export function CeilingObject({
   openingId,
   inset,
   children,
-}: CeilingObjectProps) {
+}, ref) {
   const objectContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
   const transform = useCeilingObjectPlacement({
     roomId,
@@ -103,12 +104,12 @@ export function CeilingObject({
 
   return (
     <RoomObjectContext.Provider value={objectContext}>
-      <group position={transform.position} rotation={transform.rotation}>
+      <group ref={ref} position={transform.position} rotation={transform.rotation}>
         {children}
       </group>
     </RoomObjectContext.Provider>
   )
-}
+})
 
 export type UseFloorPlacementInput = {
   roomId: string
@@ -248,7 +249,7 @@ export type WallObjectProps = {
   children?: ReactNode
 }
 
-export function WallObject({
+export const WallObject = forwardRef<Group, WallObjectProps>(function WallObject({
   roomId,
   side,
   offset,
@@ -258,7 +259,7 @@ export function WallObject({
   openingId,
   openingKind,
   children,
-}: WallObjectProps) {
+}, ref) {
   const roomContext = useMemo<RoomObjectContextValue>(() => ({ roomId }), [roomId])
   const placement = useWallObjectPlacement({
     roomId,
@@ -277,13 +278,13 @@ export function WallObject({
   return (
     <RoomObjectContext.Provider value={roomContext}>
       <WallObjectContext.Provider value={wallContext}>
-        <group position={placement.position} rotation={placement.rotation}>
+        <group ref={ref} position={placement.position} rotation={placement.rotation}>
           {children}
         </group>
       </WallObjectContext.Provider>
     </RoomObjectContext.Provider>
   )
-}
+})
 
 export type UseWallPlacementInput = {
   roomId: string
