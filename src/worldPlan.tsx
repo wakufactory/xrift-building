@@ -235,7 +235,8 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
         <WindowFrameObject roomId="1-robby" windowId="0" frameSize={[0.1,0.3]}/>
         <WindowFrameObject roomId="1-robby" windowId="1" frameSize={[0.1,0.3]}/>
         <WindowFrameObject roomId="1-robby" windowId="2" frameSize={[0.1,0.3]}/>
-
+        <WindowFrameObject roomId="2-gallery" windowId="0" frameSize={[0.1,0.3]} color="#20c020"/>
+        <WindowFrameObject roomId="2-gallery" windowId="1" frameSize={[0.1,0.3]} color="#20c020"/>
         //入口ドア  offset: 2.7, width: 2.1, height: 2.25 
         <WallObject roomId="1-robby" openingId="enterdoor" >
           <DoorFrame doorSize={[2.1,2.25]} doorThickness={0.1}/>
@@ -289,6 +290,11 @@ export function Buildings({position=[0,0,0]}:{position?:Vec3}) {
         <RoomObject roomId="2F-robby" position={[2,-2]}>
           <TableObject size={[1.5,1.5]} color={'#e4c98e'} />
         </RoomObject>
+        //窓枠
+        <WindowFrameObject roomId="2F-robby" windowId="0" frameSize={[0.1,0.3]} color="#dc7310" />
+        <WindowFrameObject roomId="2F-robby" windowId="1" frameSize={[0.1,0.3]}/>
+        <WindowFrameObject roomId="2F-robby" windowId="2" frameSize={[0.1,0.3]}/>
+        <WindowFrameObject roomId="2F-robby" windowId="3" frameSize={[0.1,0.3]}/>
       </BuildingWorld>
  }
       //外斜面
