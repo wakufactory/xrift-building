@@ -21,6 +21,7 @@ export type BuildingPlan = {
   floorHeight: number
   wallThickness: number
   slabThickness: number
+  ambientOcclusion?: AmbientOcclusionSpec | false
   pillar?: PillarSpec
   roof?: RoofSpec | false
   materialKeys: BuildingMaterialKeys
@@ -61,12 +62,25 @@ export type RoomSpec = {
   position: Vec2
   size: Vec2
   wallThickness?: number
+  ambientOcclusion?: AmbientOcclusionSpec | false
   surfaces?: RoomSurfaces
   doors?: OpeningSpec[]
   windows?: OpeningSpec[]
   floorOpenings?: SlabOpeningSpec[]
   ceilingOpenings?: SlabOpeningSpec[]
   roofOpenings?: SlabOpeningSpec[]
+}
+
+// 建物の接合部に描画する疑似 AO の設定を表す。false で無効化する。
+export type AmbientOcclusionSpec = {
+  width?: number
+  strength?: number
+  falloff?: number
+  floor?: boolean
+  ceiling?: boolean
+  wallCorners?: boolean
+  openings?: boolean
+  pillars?: boolean
 }
 
 // 床・壁・天井などの見た目と collider の上書きを表す。
@@ -139,6 +153,26 @@ export type BoxInstance = {
 // 建物コンパイル結果として kind を持つ box instance を表す。
 export type BoxPart = BoxInstance & {
   kind: BoxPartKind
+}
+
+// 構造 box と独立して描画する平面 effect の共通表現。
+export type PlanePart = {
+  id: string
+  kind: 'ambientOcclusion'
+  position: Vec3
+  size: Vec2
+  rotation: Vec3
+  // gradientAxis は plane の UV 軸、gradientReverse は濃い端を反転する。
+  gradientAxis: 'x' | 'y'
+  gradientReverse?: boolean
+  strength: number
+  falloff: number
+}
+
+// compiler が返す構造 box と視覚 effect plane をまとめた結果。
+export type CompiledBuildingPlan = {
+  boxes: BoxPart[]
+  planes: PlanePart[]
 }
 
 // box instance がどの生成元から来たかを分類する。

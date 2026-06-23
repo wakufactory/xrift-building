@@ -14,6 +14,9 @@ export type {
   InstancedBoxLayerProps,
 } from './InstancedBoxLayer'
 
+export { InstancedPlaneLayer } from './InstancedPlaneLayer'
+export type { InstancedPlaneLayerProps } from './InstancedPlaneLayer'
+
 export {
   BuildingPlacementProvider,
   CeilingObject,
@@ -47,7 +50,7 @@ export type {
   WallObjectProps,
 } from './RoomObject'
 
-export { compileBuildingPlan } from './compilePlan'
+export { compileBuildingPlan, compileBuildingRenderPlan } from './compilePlan'
 
 export {
   getBuildingInfo,
@@ -101,11 +104,14 @@ export type {
   BoxPart,
   BoxPartColor,
   BoxPartKind,
+  AmbientOcclusionSpec,
   BuildingMaterialKeys,
   BuildingPlan,
   ExteriorGroundSpec,
   OpeningSpec,
   PillarSpec,
+  PlanePart,
+  CompiledBuildingPlan,
   RoofSpec,
   RoomMaterials,
   RoomSpec,
