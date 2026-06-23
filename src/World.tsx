@@ -7,6 +7,7 @@ import { Buildings3 } from './worldPlan3.tsx'
 import { Buildings4 } from './worldPlan4.tsx'
 import { PlayerShadowLight } from './components/PlayerShadowLight'
 import {SimpleBuilding} from './worldPlan0.tsx' 
+import {TestBuilding} from './worldPlan1.tsx' 
 
 export interface WorldProps {
   position?: [number, number, number]
@@ -29,7 +30,7 @@ export const World: React.FC<WorldProps> = () => {
         <SpawnPoint />
       </group>
 
-      <ambientLight intensity={0.15} />
+      <ambientLight intensity={0.55} />
       <hemisphereLight args={['#f4efe3', '#526069', .5]} />
       <PlayerShadowLight 
           direction = {[-2,10,10]}
@@ -37,7 +38,9 @@ export const World: React.FC<WorldProps> = () => {
           shadowSize = {54}
           shadowDepth = {70}
           shadowDistance = {80}
-          mapSize = {1024} 
+          normalBias={0.01}
+          bias={-0.0001}
+          mapSize = {2048} 
       />
 
       <Suspense fallback={null}>
@@ -45,8 +48,11 @@ export const World: React.FC<WorldProps> = () => {
         <Buildings2 position={[30, 0, 2]} />
         <Buildings3 position={[0, 0, -75]} />
         <Buildings4 position={[45, 0, 55]} />
-        <group position={[0, 0, 30]} rotation={[0, Math.PI * 0.5, 0]}>
+        <group position={[0, 0, 50]} rotation={[0, Math.PI * 0.5, 0]}>
           <SimpleBuilding />
+        </group>
+        <group position={[0, 0, 30]} rotation={[0, Math.PI * 0.5, 0]}>
+          <TestBuilding />
         </group>
       </Suspense>
     </>

@@ -16,6 +16,11 @@ export const plan1: BuildingPlan = {
   floorHeight: 5.5,
   wallThickness: 0.22,
   slabThickness: 0.12,
+  ambientOcclusion: {
+    width: 0.18,
+    strength: 0.16,
+    falloff: 1.8,
+  },
   exteriorGround: {
     margin: 5,
     thickness: 0.2,
