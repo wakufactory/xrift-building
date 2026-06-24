@@ -78,8 +78,8 @@ export type AmbientOcclusionSpec = {
   falloff?: number
   floor?: boolean
   ceiling?: boolean
+  wallFloorCeiling?: boolean
   wallCorners?: boolean
-  openings?: boolean
   pillars?: boolean
 }
 

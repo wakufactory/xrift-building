@@ -70,7 +70,7 @@ export const myPlan: BuildingPlan = {
 
 ## 疑似 AO
 
-`ambientOcclusion` を指定すると、compiler が構造 box とは独立した半透明 plane を生成します。床・天井と壁の接点、室内の壁角、ドア・窓開口の輪郭に、黒から透明へ減衰する shader gradient を描きます。AO plane は collider を持たず、構造を変更しません。
+`ambientOcclusion` を指定すると、compiler が構造 box とは独立した半透明 plane を生成します。床・天井と壁の接点（床・天井面側と壁面側）、室内の壁角に、黒から透明へ減衰する shader gradient を描きます。AO plane は collider を持たず、構造を変更しません。
 
 ```ts
 ambientOcclusion: {
@@ -79,9 +79,9 @@ ambientOcclusion: {
   falloff: 1.8,      // 減衰カーブ
   floor: true,
   ceiling: true,
+  wallFloorCeiling: true, // 床・天井との境界を壁面側にも描く。既定 true
   wallCorners: true, // 既定 true
-  // openings / pillars は既定で false。必要な建物だけ true を指定する。
-  openings: false,
+  // pillars は既定で false。必要な建物だけ true を指定する。
   pillars: false,
 }
 ```

@@ -6,7 +6,7 @@ import type { BuildingMaterialCatalog } from './materials'
 import type { BoxInstanceSource, BoxPart, BuildingPlan, PlanePart } from './types'
 
 // Fast Refresh 時にも compiler 変更後の box / plane を再生成する。
-const BUILDING_COMPILE_VERSION = 5
+const BUILDING_COMPILE_VERSION = 6
 
 // Building コンポーネントへ渡す plan、material、ログ設定を表す。
 export type BuildingProps = {

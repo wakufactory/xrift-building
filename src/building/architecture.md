@@ -78,11 +78,25 @@ xrift-building-world/
       InstancedBoxLayer.tsx
       InstancedPlaneLayer.tsx
       compilePlan.ts
+      compiler/
+        planScale.ts
+        surface.ts
+        walls.ts
+        ambientOcclusion.ts
+        roomTopology.ts
       placement.ts
       materials.ts
       types.ts
       architecture.md
 ```
+
+`compilePlan.ts` は公開コンパイル API と、建物全体を組み立てるオーケストレーションを担当します。内部の個別処理は `compiler/` に分けています。
+
+- `planScale.ts`: `plan.unit` を world units へ正規化する
+- `surface.ts`: `SurfaceSpec` の表示・collider 上書きを適用する
+- `walls.ts`: 壁開口の正規化、壁ローカル矩形の分割、box への変換を行う
+- `ambientOcclusion.ts`: wall/slab の接点と角の AO plane を生成する
+- `roomTopology.ts`: 隣接 room の共有壁の所有区間を判定する
 
 ## データモデル
 
@@ -383,7 +397,7 @@ material catalog に texture がある場合は `useXRift().baseUrl` と `textur
 
 material 自体の `color` は白にし、`vertexColors: true` と `instanceColor` で表面色を出します。これにより、同じ material key なら色違いでも 1 つの instanced mesh にまとめられます。
 
-`InstancedPlaneLayer` は構造 box と独立した `PlanePart[]` を 1 つの `InstancedMesh` にまとめます。現在の `ambientOcclusion` plane は `MeshBasicMaterial` の shader で UV に沿う黒→透明の gradient を計算します。`transparent: true`、`depthTest: true`、`depthWrite: false`、`renderOrder = 20` とし、compiler が対象面から室内側へ 1–2mm 浮かせるため、構造や collider の深度を変更しません。
+`InstancedPlaneLayer` は構造 box と独立した `PlanePart[]` を 1 つの `InstancedMesh` にまとめます。現在の `ambientOcclusion` plane は `ShaderMaterial` で UV に沿う黒→透明の gradient を計算します。床・天井と壁の接点は、水平面側に加えて `wallFloorCeiling` が有効なら壁面側にも plane を生成します。`transparent: true`、`depthTest: true`、`depthWrite: false`、`renderOrder = 20` とし、compiler が対象面から室内側へ 1–2mm 浮かせるため、構造や collider の深度を変更しません。
 
 ## 物理
 
